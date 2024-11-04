@@ -1,0 +1,1085 @@
+"https://github.com/cfenollosa/os-tutorial/tree/master/05-bootsector-functions-strings" ==> read this article , it is so simple for looping and control flow statements 
+
+"http://teaching.idallen.com/dat2343/09f/notes/asm_control.htm" ==> best for both translation of assembly and c code ==> BEST 
+
+'''
+EXPLANATION : 
+Very Detailed Answer: Understanding the Assembly Code for a Boot Sector
+Question Summary
+
+The provided assembly code is a simple boot sector program that outputs messages to the screen. It demonstrates basic operations such as moving data, calling functions, and handling strings in assembly language. This response will break down the code line by line to elucidate its functionality.
+Answer
+
+The assembly code snippet you provided is designed to run in a boot sector environment, specifically at the memory address 0x7C00. This is a common starting point for bootloaders in x86 architecture. Let's dissect the code step by step.
+Code Breakdown
+
+language-assembly
+
+[org 0x7c00] ; tell the assembler that our offset is bootsector code
+
+This directive informs the assembler that the code will be loaded at the memory address 0x7C00. This is crucial for boot sector programs, as they are expected to start executing from this location.
+
+language-assembly
+
+; The main routine makes sure the parameters are ready and then calls the function
+mov bx, HELLO
+call print
+
+Here, the mov instruction places the address of the string HELLO into the BX register. The call print instruction then invokes the print subroutine, which is responsible for displaying the string stored at the address in BX.
+
+language-assembly
+
+call print_nl
+
+This line calls another subroutine, print_nl, which likely outputs a newline character to the screen, ensuring that the next output starts on a new line.
+
+language-assembly
+
+mov bx, GOODBYE
+call print
+
+Similar to the previous mov instruction, this line loads the address of the GOODBYE string into BX and calls the print subroutine again to display this message.
+
+language-assembly
+
+call print_nl
+
+Once more, this calls the print_nl subroutine to add a newline after the "Goodbye" message.
+
+language-assembly
+
+mov dx, 0x12fe
+call print_hex
+
+In this segment, the mov instruction places the hexadecimal value 0x12FE into the DX register. The call print_hex instruction is then executed, which presumably converts the value in DX to a hexadecimal string and displays it on the screen.
+
+language-assembly
+
+; that's it! we can hang now
+jmp $
+
+The jmp $ instruction creates an infinite loop, effectively halting further execution. The $ symbol represents the current address, so this instruction keeps the program running indefinitely.
+Subroutine Inclusion
+
+language-assembly
+
+; remember to include subroutines below the hang
+%include "boot_sect_print.asm"
+%include "boot_sect_print_hex.asm"
+
+These lines include external files that contain the definitions for the print and print_hex subroutines. This modular approach allows for cleaner code and reusability of common functions.
+Data Section
+
+language-assembly
+
+; data
+HELLO:
+    db 'Hello, World', 0
+
+GOODBYE:
+    db 'Goodbye', 0
+
+In this section, two strings are defined. The db directive (define byte) is used to allocate space for the strings "Hello, World" and "Goodbye", with a null terminator (0) at the end of each string to signify the end of the string for the print subroutine.
+Padding and Boot Signature
+
+language-assembly
+
+; padding and magic number
+times 510-($-$$) db 0
+dw 0xaa55
+
+This part of the code ensures that the boot sector is exactly 512 bytes long. The times directive fills the remaining space with zeros until the total size reaches 510 bytes. The last two bytes are set to 0xAA55, which is the boot signature that the BIOS looks for to identify a valid boot sector.
+Conclusion
+
+In summary, this assembly code is a simple boot sector program that outputs "Hello, World", followed by "Goodbye", and then displays the hexadecimal value 0x12FE. It demonstrates fundamental assembly language concepts such as data movement, function calls, and string handling. The inclusion of external subroutines allows for a more organized and modular approach to coding in assembly language. Understanding this code provides a solid foundation for further exploration into low-level programming and bootloader development.
+'''
+
+
+''' "https://mrempy.medium.com/assembly-16-bits-printing-strings-a114c72f6e43" == REFER FOR 0X0E AND BIOS CALLS WITH AH 
+printing character : 
+Very Detailed Answer: Understanding BIOS Character Printing in Assembly Language
+Question Summary
+
+The question seeks to clarify the functionality of a specific segment of Assembly code that utilizes BIOS interrupts for character printing. It particularly focuses on the role of the int 0x10 instruction and the significance of newline and carriage return characters in the context of output formatting. Additionally, it inquires whether the code prints each character on a new line.
+Answer
+
+To understand the provided Assembly code, we need to break down its components and the underlying principles of how BIOS interrupts work for character output. The code snippet is designed to print a string character by character, utilizing BIOS services to display each character on the screen.
+Code Breakdown
+
+    Initialization and Looping:
+
+    language-assembly
+
+print:
+    pusha
+
+The pusha instruction saves all general-purpose registers onto the stack. This is a common practice to preserve the state of the registers before performing operations that may alter them.
+
+Character Printing Loop:
+
+language-assembly
+
+start:
+    mov al, [bx] ; 'bx' is the base address for the string
+    cmp al, 0 
+    je done
+
+Here, the code loads the character pointed to by the bx register into the al register. The cmp al, 0 instruction checks if the character is the null terminator (0), which indicates the end of the string. If it is, the program jumps to the done label.
+
+BIOS Character Output:
+
+language-assembly
+
+    mov ah, 0x0e
+    int 0x10 ; 'al' already contains the char
+
+The mov ah, 0x0e instruction sets up the BIOS interrupt for teletype output. The int 0x10 call then prints the character contained in al to the screen. This is where the BIOS takes over to handle the actual display of the character.
+
+Pointer Increment and Loop Continuation:
+
+language-assembly
+
+    add bx, 1
+    jmp start
+
+After printing the character, the code increments the bx register to point to the next character in the string and jumps back to the start label to repeat the process.
+
+Completion:
+
+language-assembly
+
+    done:
+        popa
+        ret
+
+    Once the null terminator is reached, the program restores the registers from the stack and returns from the function.
+
+Newline and Carriage Return
+
+The print_nl function is responsible for handling new lines and carriage returns:
+
+language-assembly
+
+print_nl:
+    pusha
+    
+    mov ah, 0x0e
+    mov al, 0x0a ; newline char
+    int 0x10
+    mov al, 0x0d ; carriage return
+    int 0x10
+    
+    popa
+    ret
+
+    Newline Character (0x0A): This character moves the cursor down to the next line.
+    Carriage Return (0x0D): This character moves the cursor back to the beginning of the current line.
+
+Pictorial Representation
+
+To visualize how the characters are printed, consider the following example string: "hello".
+
+    Initial State:
+
+    Cursor Position: ^
+
+    After Printing 'h':
+
+    h
+    Cursor Position: ^
+
+    After Printing 'e':
+
+    he
+    Cursor Position: ^
+
+    After Printing 'l':
+
+    hel
+    Cursor Position: ^
+
+    After Printing 'l':
+
+    hell
+    Cursor Position: ^
+
+    After Printing 'o':
+
+    hello
+    Cursor Position: ^
+
+If the print_nl function is called after printing "hello", the output would be:
+
+hello
+Cursor Position: ^
+
+Then, if print_nl is executed, the cursor moves down to the next line, and the next character printed would appear on a new line.
+Conclusion
+
+In summary, the code provided prints each character of a string sequentially using BIOS interrupts. The newline and carriage return characters are crucial for formatting the output correctly. The int 0x10 instruction is responsible for displaying each character on the screen, and the cursor's position is managed by the newline and carriage return characters, ensuring that the output appears as intended. Thus, the code does not print each character on a new line unless explicitly instructed to do so by calling the print_nl function. 
+'''
+
+
+'''
+
+The task is to explain the provided Assembly code, perform a dry run using a simple example, and illustrate the function calls and memory stack operations with pictorial representations. The code is designed to convert a hexadecimal value stored in the dx register into its ASCII representation and print it.
+Answer
+Code Explanation
+
+The provided Assembly code is a subroutine named print_hex that converts a 16-bit hexadecimal number (in dx) into its ASCII representation and stores it in a predefined memory location (HEX_OUT). The code uses a loop to extract each hexadecimal digit, convert it to ASCII, and store it in the correct position in the output string.
+Breakdown of the Code
+
+    Function Prologue:
+
+    language-assembly
+
+pusha
+
+This instruction saves all general-purpose registers onto the stack to preserve their values during the function execution.
+
+Initialization:
+
+language-assembly
+
+mov cx, 0 ; our index variable
+
+The cx register is initialized to zero. It will serve as an index for the loop that processes each hexadecimal digit.
+
+Hexadecimal Conversion Loop:
+
+language-assembly
+
+hex_loop:
+    cmp cx, 4 ; loop 4 times
+    je end
+
+The loop will iterate four times, corresponding to the four hexadecimal digits in a 16-bit number.
+
+Extracting and Converting the Last Hex Digit:
+
+language-assembly
+
+mov ax, dx ; we will use 'ax' as our working register
+and ax, 0x000f ; mask to get the last hex digit
+add al, 0x30 ; convert to ASCII
+cmp al, 0x39 ; check if it's a digit
+jle step2
+add al, 7 ; adjust for letters A-F
+
+    The last hexadecimal digit is extracted by masking dx with 0x000F.
+    The digit is converted to its ASCII equivalent by adding 0x30 (the ASCII value for '0').
+    If the digit is greater than 9, it is adjusted to represent 'A' to 'F' by adding 7.
+
+Storing the ASCII Character:
+
+language-assembly
+
+step2:
+    mov bx, HEX_OUT + 5 ; base + length
+    sub bx, cx  ; calculate position
+    mov [bx], al ; store ASCII character
+
+The ASCII character is stored in the HEX_OUT string at the calculated position.
+
+Rotating the Hex Value:
+
+language-assembly
+
+ror dx, 4 ; rotate right to process the next digit
+
+The ror instruction rotates the bits in dx to the right by 4 bits, effectively moving the next hexadecimal digit into the least significant position.
+
+Loop Control:
+
+language-assembly
+
+add cx, 1
+jmp hex_loop
+
+The index is incremented, and the loop continues until all four digits are processed.
+
+Function Epilogue:
+
+language-assembly
+
+end:
+    mov bx, HEX_OUT
+    call print
+    popa
+    ret
+
+After processing, the function prepares to call another function (print) to display the result and restores the registers before returning.
+
+"
+Dry Run Example
+
+Let's perform a dry run of the code with dx = 0x1234.
+
+    Initial State:
+        dx = 0x1234
+        HEX_OUT is initialized to 0x0000.
+
+    First Iteration (cx = 0):
+        ax = 0x1234, and ax, 0x000F → ax = 0x0004
+        add al, 0x30 → al = 0x34 (ASCII '4')
+        Store at HEX_OUT[5 - 0] → HEX_OUT[5] = 0x34 (ASCII '4')
+        Rotate dx → dx = 0x4123
+
+    Second Iteration (cx = 1):
+        ax = 0x4123, and ax, 0x000F → ax = 0x0003
+        add al, 0x30 → al = 0x33 (ASCII '3')
+        Store at HEX_OUT[5 - 1] → HEX_OUT[4] = 0x33 (ASCII '3')
+        Rotate dx → dx = 0x3412
+
+    Third Iteration (cx = 2):
+        ax = 0x3412, and ax, 0x000F → ax = 0x0002
+        add al, 0x30 → al = 0x32 (ASCII '2')
+        Store at HEX_OUT[5 - 2] → HEX_OUT[3] = 0x32 (ASCII '2')
+        Rotate dx → dx = 0x2341
+
+    Fourth Iteration (cx = 3):
+        ax = 0x2341, and ax, 0x000F → ax = 0x0001
+        add al, 0x30 → al = 0x31 (ASCII '1')
+        Store at HEX_OUT[5 - 3] → HEX_OUT[2] = 0x31 (ASCII '1')
+        Rotate dx → dx = 0x1234 (back to original)
+
+    End of Loop:
+        The loop ends after four iterations.
+        The final HEX_OUT will be 0x0000 followed by 0x31, 0x32, 0x33, 0x34, resulting in the string 0x1234.
+
+Pictorial Representation of Function Calls and Memory Stack
+
+Below is a simplified representation of the memory stack and function calls during the execution of print_hex.
+
++------------------+
+| Memory Address    |
++------------------+
+| 0x0000           |  <- HEX_OUT[0]
+| 0x0001           |  <- HEX_OUT[1]
+| 0x0002           |  <- HEX_OUT[2] -> '1'
+| 0x0003           |  <- HEX_OUT[3] -> '2'
+| 0x0004           |  <- HEX_OUT[4] -> '3'
+| 0x0005           |  <- HEX_OUT[5] -> '4'
++------------------+
+| Stack Frame       |
++------------------+
+| Return Address    |
+| Saved Registers   |
++------------------+
+
+Conclusion : 
+The print_hex function effectively converts a 16-bit hexadecimal number into its ASCII representation, storing the result in a designated memory area. The dry run illustrates how each digit is processed and stored, while the pictorial representation provides a clear view of the memory stack during execution. This detailed explanation should clarify the workings of the code and its intended functionality.
+"
+
+"
+WHY LAST CHARACTER ONLY : 
+==> The question seeks to clarify why the provided Assembly code processes the hexadecimal representation of a number starting from the right-most bit (Most Significant Bit, MSB) rather than the Least Significant Bit (LSB).
+Answer
+
+In the realm of Assembly language programming, particularly when dealing with hexadecimal numbers, the choice of processing direction—whether from the right-most bit (MSB) or the left-most bit (LSB)—is crucial for achieving the desired output format. The code snippet provided is designed to convert a 16-bit hexadecimal number stored in the dx register into its ASCII representation, which is then stored in a designated memory area.
+Hexadecimal Representation
+
+Hexadecimal numbers are base-16, meaning they consist of digits ranging from 0 to 9 and letters A to F. Each digit in a hexadecimal number represents four bits (a nibble). For example, the hexadecimal number 0x1234 can be broken down as follows:
+
+    1 corresponds to 0001
+    2 corresponds to 0010
+    3 corresponds to 0011
+    4 corresponds to 0100
+
+When converting this number to its ASCII representation, we need to extract each nibble and convert it to its corresponding ASCII character.
+Why Start from the Right-Most Bit (MSB)?
+
+    Hexadecimal Digit Extraction: The right-most bit (or the least significant nibble) of a hexadecimal number is the first digit we encounter when reading the number in its standard form. For 0x1234, the right-most nibble is 4, followed by 3, 2, and 1. By starting from the right, we can sequentially extract each digit in the correct order.
+
+    Bitwise Operations: The code utilizes a bitwise AND operation (and ax, 0x000f) to isolate the last nibble of the number. This operation effectively masks out the higher-order bits, allowing us to focus on the least significant nibble first. The ror dx, 4 instruction then rotates the bits of dx to the right, effectively moving the next nibble into the least significant position for the next iteration.
+
+    ASCII Conversion Logic: The conversion logic is designed to handle the ASCII values for both numeric and alphabetic characters. By processing from the right-most bit, we ensure that the ASCII characters are placed in the correct order in the output string. The code calculates the position in the output string using the index variable cx, which increments with each loop iteration.
+
+    Output String Construction: The output string is constructed in reverse order if we were to process from the left-most bit (MSB) first. By starting from the right-most bit, we can directly place the ASCII characters in the correct positions without needing to reverse the string afterward.
+
+Code Walkthrough
+
+Here’s a breakdown of the relevant sections of the code:
+
+language-assembly
+
+hex_loop:
+    cmp cx, 4 ; loop 4 times
+    je end
+    
+    ; 1. convert last char of 'dx' to ascii
+    mov ax, dx ; we will use 'ax' as our working register
+    and ax, 0x000f ; isolate the last nibble
+    add al, 0x30 ; convert to ASCII
+    cmp al, 0x39 ; check if it's greater than '9'
+    jle step2
+    add al, 7 ; adjust for 'A' to 'F'
+
+step2:
+    ; 2. calculate the position in the output string
+    mov bx, HEX_OUT + 5 ; base address of output string
+    sub bx, cx  ; adjust for current index
+    mov [bx], al ; store ASCII character
+    ror dx, 4 ; rotate right to process next nibble
+
+    ; increment index and loop
+    add cx, 1
+    jmp hex_loop
+
+Conclusion
+
+In summary, the decision to start processing from the right-most bit (MSB) in the provided Assembly code is driven by the need to extract and convert each hexadecimal digit in the correct order. This approach simplifies the logic for both extraction and ASCII conversion, ensuring that the final output string accurately represents the original hexadecimal number. By understanding these principles, one can appreciate the elegance and efficiency of Assembly language programming in handling low-level data manipulation tasks.
+
+"
+
+OUTPUT : Hello, World
+Goodbye
+0x12FE
+
+binaries : 
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/05-bootsector-functions-strings$ qemu-system-x86_64 -drive format=raw, file=boot_sect_main.bin
+qemu-system-x86_64: -drive format=raw,: A block device must be specified for "file"
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/05-bootsector-functions-strings$ qemu-system-x86_64 -drive format=raw,file=boot_sect_main.bin
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/05-bootsector-functions-strings$ xxd boot_sect_main.bin
+
+00000000: bb6d 7ce8 1400 e823 00bb 7a7c e80b 00e8  .m|....#..z|....
+00000010: 1a00 bafe 12e8 2100 ebfe 608a 073c 0074  ......!...`..<.t
+00000020: 09b4 0ecd 1083 c301 ebf1 61c3 60b4 0eb0  ..........a.`...
+00000030: 0acd 10b0 0dcd 1061 c360 b900 0083 f904  .......a.`......
+00000040: 741c 89d0 83e0 0f04 303c 397e 0204 07bb  t.......0<9~....
+00000050: 6b7c 29cb 8807 c1ca 0483 c101 ebdf bb66  k|)............f
+00000060: 7ce8 b6ff 61c3 3078 3030 3030 0048 656c  |...a.0x0000.Hel
+00000070: 6c6f 2c20 576f 726c 6400 476f 6f64 6279  lo, World.Goodby
+00000080: 6500 0000 0000 0000 0000 0000 0000 0000  e...............
+.... 
+000001f0: 0000 0000 0000 0000 0000 0000 0000 55aa  ..............U.
+
+
+WE CAN OBSERVE THE COMPARISON OPERATORS < , AND ALSO LHS AND RHS FOR OPERATORS , 0 AND 9 , 
+
+FOR FLAGS REFER : "https://medium.com/@ismielabir/understanding-the-flag-register-in-x86-assembly-language-dc858ef1c38c" OR "https://www.geeksforgeeks.org/flag-register-8086-microprocessor/"
+
+I WANT THE WHOLE DIS-ASSEMBLY OF CODE : 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/05-bootsector-functions-strings$ ndisasm -b8 boot_sect_main.asm - reading the asm file : 
+
+00000000  5B                db 0x5b
+00000001  6F                db 0x6f
+00000002  7267              jc 0x6b
+00000004  2030              and [eax],dh
+00000006  7837              js 0x3f
+00000008  6330              arpl [eax],si
+0000000A  305D20            xor [ebp+0x20],bl
+0000000D  3B                db 0x3b
+0000000E  2074656C          and [ebp+0x6c],dh
+00000012  6C                insb
+00000013  20746865          and [eax+ebp*2+0x65],dh
+00000017  206173            and [ecx+0x73],ah
+0000001A  7365              jnc 0x81
+0000001C  6D                db 0x6d
+0000001D  62                db 0x62
+0000001E  6C                insb
+0000001F  657220            gs jc 0x42
+00000022  7468              jz 0x8c
+00000024  61                db 0x61
+00000025  7420              jz 0x47
+00000027  6F                db 0x6f
+00000028  7572              jnz 0x9c
+0000002A  206F66            and [edi+0x66],ch
+0000002D  667365            o16 jnc 0x95
+00000030  7420              jz 0x52
+00000032  69                db 0x69
+00000033  7320              jnc 0x55
+00000035  62                db 0x62
+00000036  6F                db 0x6f
+00000037  6F                db 0x6f
+00000038  7473              jz 0xad
+0000003A  6563746F72        arpl [gs:edi+ebp*2+0x72],si
+0000003F  20636F            and [ebx+0x6f],ah
+00000042  64650A0A          or cl,[gs:edx]
+00000046  3B                db 0x3b
+00000047  20546865          and [eax+ebp*2+0x65],dl
+0000004B  206D61            and [ebp+0x61],ch
+0000004E  69                db 0x69
+0000004F  6E                outsb
+00000050  20726F            and [edx+0x6f],dh
+00000053  7574              jnz 0xc9
+00000055  69                db 0x69
+00000056  6E                outsb
+00000057  65206D61          and [gs:ebp+0x61],ch
+0000005B  6B                db 0x6b
+0000005C  657320            gs jnc 0x7f
+0000005F  7375              jnc 0xd6
+00000061  7265              jc 0xc8
+00000063  20746865          and [eax+ebp*2+0x65],dh
+00000067  207061            and [eax+0x61],dh
+0000006A  7261              jc 0xcd
+0000006C  6D                db 0x6d
+0000006D  657465            gs jz 0xd5
+00000070  7273              jc 0xe5
+00000072  206172            and [ecx+0x72],ah
+00000075  65207265          and [gs:edx+0x65],dh
+00000079  61                db 0x61
+0000007A  647920            fs jns 0x9d
+0000007D  61                db 0x61
+0000007E  6E                outsb
+0000007F  6420746865        and [fs:eax+ebp*2+0x65],dh
+00000084  6E                outsb
+00000085  206361            and [ebx+0x61],ah
+00000088  6C                insb
+00000089  6C                insb
+0000008A  7320              jnc 0xac
+0000008C  7468              jz 0xf6
+0000008E  65206675          and [gs:esi+0x75],ah
+00000092  6E                outsb
+00000093  6374696F          arpl [ecx+ebp*2+0x6f],si
+00000097  6E                outsb
+00000098  0A6D6F            or ch,[ebp+0x6f]
+0000009B  7620              jna 0xbd
+0000009D  62                db 0x62
+0000009E  782C              js 0xcc
+000000A0  204845            and [eax+0x45],cl
+000000A3  4C                db 0x4c
+000000A4  4C                db 0x4c
+000000A5  4F                db 0x4f
+000000A6  203B              and [ebx],bh
+000000A8  204845            and [eax+0x45],cl
+000000AB  4C                db 0x4c
+000000AC  4C                db 0x4c
+000000AD  4F                db 0x4f
+000000AE  204953            and [ecx+0x53],cl
+000000B1  20544845          and [eax+ecx*2+0x45],dl
+000000B5  205354            and [ebx+0x54],dl
+000000B8  52                db 0x52
+000000B9  49                db 0x49
+000000BA  4E                db 0x4e
+000000BB  47                db 0x47
+000000BC  200A              and [edx],cl
+000000BE  63616C            arpl [ecx+0x6c],sp
+000000C1  6C                insb
+000000C2  207072            and [eax+0x72],dh
+000000C5  69                db 0x69
+000000C6  6E                outsb
+000000C7  740A              jz 0xd3
+000000C9  0A6361            or ah,[ebx+0x61]
+000000CC  6C                insb
+000000CD  6C                insb
+000000CE  207072            and [eax+0x72],dh
+000000D1  69                db 0x69
+000000D2  6E                outsb
+000000D3  745F              jz 0x134
+000000D5  6E                outsb
+000000D6  6C                insb
+000000D7  0A0A              or cl,[edx]
+000000D9  6D                db 0x6d
+000000DA  6F                db 0x6f
+000000DB  7620              jna 0xfd
+000000DD  62                db 0x62
+000000DE  782C              js 0x10c
+000000E0  20474F            and [edi+0x4f],al
+000000E3  4F                db 0x4f
+000000E4  44                db 0x44
+000000E5  42                db 0x42
+000000E6  59                db 0x59
+000000E7  45                db 0x45
+000000E8  203B              and [ebx],bh
+000000EA  20474F            and [edi+0x4f],al
+000000ED  4F                db 0x4f
+000000EE  44                db 0x44
+000000EF  42                db 0x42
+000000F0  59                db 0x59
+000000F1  45                db 0x45
+000000F2  204953            and [ecx+0x53],cl
+000000F5  20544845          and [eax+ecx*2+0x45],dl
+000000F9  205354            and [ebx+0x54],dl
+000000FC  52                db 0x52
+000000FD  49                db 0x49
+000000FE  4E                db 0x4e
+000000FF  47                db 0x47
+00000100  200A              and [edx],cl
+00000102  63616C            arpl [ecx+0x6c],sp
+00000105  6C                insb
+00000106  207072            and [eax+0x72],dh
+00000109  69                db 0x69
+0000010A  6E                outsb
+0000010B  740A              jz 0x117
+0000010D  0A6361            or ah,[ebx+0x61]
+00000110  6C                insb
+00000111  6C                insb
+00000112  207072            and [eax+0x72],dh
+00000115  69                db 0x69
+00000116  6E                outsb
+00000117  745F              jz 0x178
+00000119  6E                outsb
+0000011A  6C                insb
+0000011B  0A0A              or cl,[edx]
+0000011D  6D                db 0x6d
+0000011E  6F                db 0x6f
+0000011F  7620              jna 0x141
+00000121  64782C            fs js 0x150
+00000124  2030              and [eax],dh
+00000126  7831              js 0x159
+00000128  326665            xor ah,[esi+0x65]
+0000012B  0A6361            or ah,[ebx+0x61]
+0000012E  6C                insb
+0000012F  6C                insb
+00000130  207072            and [eax+0x72],dh
+00000133  69                db 0x69
+00000134  6E                outsb
+00000135  745F              jz 0x196
+00000137  68                db 0x68
+00000138  65780A            gs js 0x145
+0000013B  0A3B              or bh,[ebx]
+0000013D  20746861          and [eax+ebp*2+0x61],dh
+00000141  7427              jz 0x16a
+00000143  7320              jnc 0x165
+00000145  69                db 0x69
+00000146  7421              jz 0x169
+00000148  207765            and [edi+0x65],dh
+0000014B  206361            and [ebx+0x61],ah
+0000014E  6E                outsb
+0000014F  206861            and [eax+0x61],ch
+00000152  6E                outsb
+00000153  67206E6F          and [esi+0x6f],ch
+00000157  770A              ja 0x163
+00000159  6A6D              push byte +0x6d
+0000015B  7020              jo 0x17d
+0000015D  240A              and al,0xa
+0000015F  0A3B              or bh,[ebx]
+00000161  207265            and [edx+0x65],dh
+00000164  6D                db 0x6d
+00000165  65                gs
+00000166  6D                db 0x6d
+00000167  62                db 0x62
+00000168  657220            gs jc 0x18b
+0000016B  746F              jz 0x1dc
+0000016D  20696E            and [ecx+0x6e],ch
+00000170  636C7564          arpl [ebp+esi*2+0x64],bp
+00000174  65207375          and [gs:ebx+0x75],dh
+00000178  62                db 0x62
+00000179  726F              jc 0x1ea
+0000017B  7574              jnz 0x1f1
+0000017D  69                db 0x69
+0000017E  6E                outsb
+0000017F  657320            gs jnc 0x1a2
+00000182  62                db 0x62
+00000183  656C              gs insb
+00000185  6F                db 0x6f
+00000186  7720              ja 0x1a8
+00000188  7468              jz 0x1f2
+0000018A  65206861          and [gs:eax+0x61],ch
+0000018E  6E                outsb
+0000018F  670A25696E636C    or ah,[dword 0x6c636e69]
+00000196  7564              jnz 0x1fc
+00000198  652022            and [gs:edx],ah
+0000019B  62                db 0x62
+0000019C  6F                db 0x6f
+0000019D  6F                db 0x6f
+0000019E  745F              jz 0x1ff
+000001A0  7365              jnc 0x207
+000001A2  63745F70          arpl [edi+ebx*2+0x70],si
+000001A6  7269              jc 0x211
+000001A8  6E                outsb
+000001A9  742E              jz 0x1d9
+000001AB  61                db 0x61
+000001AC  736D              jnc 0x21b
+000001AE  220A              and cl,[edx]
+000001B0  25                db 0x25
+000001B1  69                db 0x69
+000001B2  6E                outsb
+000001B3  636C7564          arpl [ebp+esi*2+0x64],bp
+000001B7  652022            and [gs:edx],ah
+000001BA  62                db 0x62
+000001BB  6F                db 0x6f
+000001BC  6F                db 0x6f
+000001BD  745F              jz 0x21e
+000001BF  7365              jnc 0x226
+000001C1  63745F70          arpl [edi+ebx*2+0x70],si
+000001C5  7269              jc 0x230
+000001C7  6E                outsb
+000001C8  745F              jz 0x229
+000001CA  68                db 0x68
+000001CB  65782E            gs js 0x1fc
+000001CE  61                db 0x61
+000001CF  736D              jnc 0x23e
+000001D1  220A              and cl,[edx]
+000001D3  0A0A              or cl,[edx]
+000001D5  3B                db 0x3b
+000001D6  20646174          and [ecx+0x74],ah
+000001DA  61                db 0x61
+000001DB  0A4845            or cl,[eax+0x45]
+000001DE  4C                db 0x4c
+000001DF  4C                db 0x4c
+000001E0  4F                db 0x4f
+000001E1  3A0A              cmp cl,[edx]
+000001E3  2020              and [eax],ah
+000001E5  2020              and [eax],ah
+000001E7  64                fs
+000001E8  62                db 0x62
+000001E9  2027              and [edi],ah
+000001EB  48                db 0x48
+000001EC  656C              gs insb
+000001EE  6C                insb
+000001EF  6F                db 0x6f
+000001F0  2C20              sub al,0x20
+000001F2  57                db 0x57
+000001F3  6F                db 0x6f
+000001F4  726C              jc 0x262
+000001F6  6427              fs daa
+000001F8  2C20              sub al,0x20
+000001FA  3020              xor [eax],ah
+000001FC  203B              and [ebx],bh
+000001FE  20544552          and [ebp+eax*2+0x52],dl
+00000202  4D                db 0x4d
+00000203  49                db 0x49
+00000204  4E                db 0x4e
+00000205  41                db 0x41
+00000206  54                db 0x54
+00000207  45                db 0x45
+00000208  205749            and [edi+0x49],dl
+0000020B  54                db 0x54
+0000020C  48                db 0x48
+0000020D  204E55            and [esi+0x55],cl
+00000210  4C                db 0x4c
+00000211  4C                db 0x4c
+00000212  204348            and [ebx+0x48],al
+00000215  41                db 0x41
+00000216  52                db 0x52
+00000217  41                db 0x41
+00000218  43                db 0x43
+00000219  54                db 0x54
+0000021A  45                db 0x45
+0000021B  52                db 0x52
+0000021C  202C20            and [eax],ch
+0000021F  53                db 0x53
+00000220  4F                db 0x4f
+00000221  2030              and [eax],dh
+00000223  200A              and [edx],cl
+00000225  0A474F            or al,[edi+0x4f]
+00000228  4F                db 0x4f
+00000229  44                db 0x44
+0000022A  42                db 0x42
+0000022B  59                db 0x59
+0000022C  45                db 0x45
+0000022D  3A0A              cmp cl,[edx]
+0000022F  2020              and [eax],ah
+00000231  2020              and [eax],ah
+00000233  64                fs
+00000234  62                db 0x62
+00000235  2027              and [edi],ah
+00000237  47                db 0x47
+00000238  6F                db 0x6f
+00000239  6F                db 0x6f
+0000023A  64                fs
+0000023B  62                db 0x62
+0000023C  7965              jns 0x2a3
+0000023E  27                daa
+0000023F  2C20              sub al,0x20
+00000241  300A              xor [edx],cl
+00000243  0A3B              or bh,[ebx]
+00000245  207061            and [eax+0x61],dh
+00000248  64                fs
+00000249  64                fs
+0000024A  69                db 0x69
+0000024B  6E                outsb
+0000024C  6720616E          and [ecx+0x6e],ah
+00000250  64206D61          and [fs:ebp+0x61],ch
+00000254  67                a32
+00000255  69                db 0x69
+00000256  6320              arpl [eax],sp
+00000258  6E                outsb
+00000259  756D              jnz 0x2c8
+0000025B  62                db 0x62
+0000025C  65720A            gs jc 0x269
+0000025F  7469              jz 0x2ca
+00000261  6D                db 0x6d
+00000262  657320            gs jnc 0x285
+00000265  35                db 0x35
+00000266  31                db 0x31
+00000267  302D28242D24      xor [0x242d2428],ch
+0000026D  2429              and al,0x29
+0000026F  20646220          and [edx+0x20],ah
+00000273  300A              xor [edx],cl
+00000275  647720            fs ja 0x298
+00000278  307861            xor [eax+0x61],bh
+0000027B  61                db 0x61
+0000027C  35                db 0x35
+0000027D  35                db 0x35
+0000027E  0A                db 0x0a
+'''
+
+'''
+reading the binary file .bin : 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/05-bootsector-functions-strings$ ndisasm -b2 boot_sect_main.bin
+00000000  BB                db 0xbb
+00000001  6D                db 0x6d
+00000002  7CE8              jl 0xffec
+00000004  1400              adc al,0x0
+00000006  E8                db 0xe8
+00000007  23                db 0x23
+00000008  00BB7A7CE80B      add [ebx+0xbe87c7a],bh
+0000000E  00E8              add al,ch
+00000010  1A00              sbb al,[eax]
+00000012  BA                db 0xba
+00000013  FE                db 0xfe
+00000014  12E8              adc ch,al
+00000016  21                db 0x21
+00000017  00EB              add bl,ch
+00000019  FE                db 0xfe
+0000001A  60                db 0x60
+0000001B  8A07              mov al,[edi]
+0000001D  3C00              cmp al,0x0
+0000001F  7409              jz 0x2a
+00000021  B40E              mov ah,0xe
+00000023  CD10              int 0x10
+00000025  83                db 0x83
+00000026  C3                ret
+00000027  01                db 0x01
+00000028  EBF1              jmp short 0x1b
+0000002A  61                db 0x61
+0000002B  C3                ret
+0000002C  60                db 0x60
+0000002D  B40E              mov ah,0xe
+0000002F  B00A              mov al,0xa
+00000031  CD10              int 0x10
+00000033  B00D              mov al,0xd
+00000035  CD10              int 0x10
+00000037  61                db 0x61
+00000038  C3                ret
+00000039  60                db 0x60
+0000003A  B9                db 0xb9
+0000003B  0000              add [eax],al
+0000003D  83                db 0x83
+0000003E  F9                stc
+0000003F  0474              add al,0x74
+00000041  1C89              sbb al,0x89
+00000043  D083E00F0430      rol byte [ebx+0x30040fe0],1
+00000049  3C39              cmp al,0x39
+0000004B  7E02              jng 0x4f
+0000004D  0407              add al,0x7
+0000004F  BB                db 0xbb
+00000050  6B                db 0x6b
+00000051  7C29              jl 0x7c
+00000053  CB                retf
+00000054  8807              mov [edi],al
+00000056  C1                db 0xc1
+00000057  CA0483            retf 0x8304
+0000005A  C1                db 0xc1
+0000005B  01                db 0x01
+0000005C  EBDF              jmp short 0x3d
+0000005E  BB                db 0xbb
+0000005F  667CE8            o16 jl 0x4a
+00000062  B6FF              mov dh,0xff
+00000064  61                db 0x61
+00000065  C3                ret
+00000066  307830            xor [eax+0x30],bh
+00000069  3030              xor [eax],dh
+0000006B  3000              xor [eax],al
+0000006D  48                db 0x48
+0000006E  656C              gs insb
+00000070  6C                insb
+00000071  6F                db 0x6f
+00000072  2C20              sub al,0x20
+00000074  57                db 0x57
+00000075  6F                db 0x6f
+00000076  726C              jc 0xe4
+00000078  6400476F          add [fs:edi+0x6f],al
+0000007C  6F                db 0x6f
+0000007D  64                fs
+0000007E  62                db 0x62
+0000007F  7965              jns 0xe6
+00000081  0000              add [eax],al
+00000083  0000              add [eax],al
+00000085  0000              add [eax],al
+00000087  0000              add [eax],al
+00000089  0000              add [eax],al
+0000008B  0000              add [eax],al
+0000008D  0000              add [eax],al
+0000008F  0000              add [eax],al
+00000091  0000              add [eax],al
+00000093  0000              add [eax],al
+00000095  0000              add [eax],al
+00000097  0000              add [eax],al
+00000099  0000              add [eax],al
+0000009B  0000              add [eax],al
+0000009D  0000              add [eax],al
+0000009F  0000              add [eax],al
+000000A1  0000              add [eax],al
+000000A3  0000              add [eax],al
+000000A5  0000              add [eax],al
+000000A7  0000              add [eax],al
+000000A9  0000              add [eax],al
+000000AB  0000              add [eax],al
+000000AD  0000              add [eax],al
+000000AF  0000              add [eax],al
+000000B1  0000              add [eax],al
+000000B3  0000              add [eax],al
+000000B5  0000              add [eax],al
+000000B7  0000              add [eax],al
+000000B9  0000              add [eax],al
+000000BB  0000              add [eax],al
+000000BD  0000              add [eax],al
+000000BF  0000              add [eax],al
+000000C1  0000              add [eax],al
+000000C3  0000              add [eax],al
+000000C5  0000              add [eax],al
+000000C7  0000              add [eax],al
+000000C9  0000              add [eax],al
+000000CB  0000              add [eax],al
+000000CD  0000              add [eax],al
+000000CF  0000              add [eax],al
+000000D1  0000              add [eax],al
+000000D3  0000              add [eax],al
+000000D5  0000              add [eax],al
+000000D7  0000              add [eax],al
+000000D9  0000              add [eax],al
+000000DB  0000              add [eax],al
+000000DD  0000              add [eax],al
+000000DF  0000              add [eax],al
+000000E1  0000              add [eax],al
+000000E3  0000              add [eax],al
+000000E5  0000              add [eax],al
+000000E7  0000              add [eax],al
+000000E9  0000              add [eax],al
+000000EB  0000              add [eax],al
+000000ED  0000              add [eax],al
+000000EF  0000              add [eax],al
+000000F1  0000              add [eax],al
+000000F3  0000              add [eax],al
+000000F5  0000              add [eax],al
+000000F7  0000              add [eax],al
+000000F9  0000              add [eax],al
+000000FB  0000              add [eax],al
+000000FD  0000              add [eax],al
+000000FF  0000              add [eax],al
+00000101  0000              add [eax],al
+00000103  0000              add [eax],al
+00000105  0000              add [eax],al
+00000107  0000              add [eax],al
+00000109  0000              add [eax],al
+0000010B  0000              add [eax],al
+0000010D  0000              add [eax],al
+0000010F  0000              add [eax],al
+00000111  0000              add [eax],al
+00000113  0000              add [eax],al
+00000115  0000              add [eax],al
+00000117  0000              add [eax],al
+00000119  0000              add [eax],al
+0000011B  0000              add [eax],al
+0000011D  0000              add [eax],al
+0000011F  0000              add [eax],al
+00000121  0000              add [eax],al
+00000123  0000              add [eax],al
+00000125  0000              add [eax],al
+00000127  0000              add [eax],al
+00000129  0000              add [eax],al
+0000012B  0000              add [eax],al
+0000012D  0000              add [eax],al
+0000012F  0000              add [eax],al
+00000131  0000              add [eax],al
+00000133  0000              add [eax],al
+00000135  0000              add [eax],al
+00000137  0000              add [eax],al
+00000139  0000              add [eax],al
+0000013B  0000              add [eax],al
+0000013D  0000              add [eax],al
+0000013F  0000              add [eax],al
+00000141  0000              add [eax],al
+00000143  0000              add [eax],al
+00000145  0000              add [eax],al
+00000147  0000              add [eax],al
+00000149  0000              add [eax],al
+0000014B  0000              add [eax],al
+0000014D  0000              add [eax],al
+0000014F  0000              add [eax],al
+00000151  0000              add [eax],al
+00000153  0000              add [eax],al
+00000155  0000              add [eax],al
+00000157  0000              add [eax],al
+00000159  0000              add [eax],al
+0000015B  0000              add [eax],al
+0000015D  0000              add [eax],al
+0000015F  0000              add [eax],al
+00000161  0000              add [eax],al
+00000163  0000              add [eax],al
+00000165  0000              add [eax],al
+00000167  0000              add [eax],al
+00000169  0000              add [eax],al
+0000016B  0000              add [eax],al
+0000016D  0000              add [eax],al
+0000016F  0000              add [eax],al
+00000171  0000              add [eax],al
+00000173  0000              add [eax],al
+00000175  0000              add [eax],al
+00000177  0000              add [eax],al
+00000179  0000              add [eax],al
+0000017B  0000              add [eax],al
+0000017D  0000              add [eax],al
+0000017F  0000              add [eax],al
+00000181  0000              add [eax],al
+00000183  0000              add [eax],al
+00000185  0000              add [eax],al
+00000187  0000              add [eax],al
+00000189  0000              add [eax],al
+0000018B  0000              add [eax],al
+0000018D  0000              add [eax],al
+0000018F  0000              add [eax],al
+00000191  0000              add [eax],al
+00000193  0000              add [eax],al
+00000195  0000              add [eax],al
+00000197  0000              add [eax],al
+00000199  0000              add [eax],al
+0000019B  0000              add [eax],al
+0000019D  0000              add [eax],al
+0000019F  0000              add [eax],al
+000001A1  0000              add [eax],al
+000001A3  0000              add [eax],al
+000001A5  0000              add [eax],al
+000001A7  0000              add [eax],al
+000001A9  0000              add [eax],al
+000001AB  0000              add [eax],al
+000001AD  0000              add [eax],al
+000001AF  0000              add [eax],al
+000001B1  0000              add [eax],al
+000001B3  0000              add [eax],al
+000001B5  0000              add [eax],al
+000001B7  0000              add [eax],al
+000001B9  0000              add [eax],al
+000001BB  0000              add [eax],al
+000001BD  0000              add [eax],al
+000001BF  0000              add [eax],al
+000001C1  0000              add [eax],al
+000001C3  0000              add [eax],al
+000001C5  0000              add [eax],al
+000001C7  0000              add [eax],al
+000001C9  0000              add [eax],al
+000001CB  0000              add [eax],al
+000001CD  0000              add [eax],al
+000001CF  0000              add [eax],al
+000001D1  0000              add [eax],al
+000001D3  0000              add [eax],al
+000001D5  0000              add [eax],al
+000001D7  0000              add [eax],al
+000001D9  0000              add [eax],al
+000001DB  0000              add [eax],al
+000001DD  0000              add [eax],al
+000001DF  0000              add [eax],al
+000001E1  0000              add [eax],al
+000001E3  0000              add [eax],al
+000001E5  0000              add [eax],al
+000001E7  0000              add [eax],al
+000001E9  0000              add [eax],al
+000001EB  0000              add [eax],al
+000001ED  0000              add [eax],al
+000001EF  0000              add [eax],al
+000001F1  0000              add [eax],al
+000001F3  0000              add [eax],al
+000001F5  0000              add [eax],al
+000001F7  0000              add [eax],al
+000001F9  0000              add [eax],al
+000001FB  0000              add [eax],al
+000001FD  0055AA            add [ebp-0x56],dl
+
+'''

@@ -1,0 +1,822 @@
+REFER : "https://0xinfection.github.io/reversing/pages/part-24-boot-sector-basics-part-7.html" ==> BEST FOR ANYTHING RELATRED TO ARM INSTRUCTIONS 
+
+HACKING A ENVIRONMENT LIKE ANYTHING FOR HARDWARE -- GITHUB REPO (BEST I HAVE SEEN SO FAR ) FOR WINDOWS FOR REVERSE ENGINEERING : ==> "https://github.com/mytechnotalent/Reverse-Engineering" 
+
+
+'''
+Question Summary
+
+In this inquiry, we explore the assembly code snippet that manipulates the stack, particularly focusing on the use of registers such as bp, bx, and al. We will analyze the stack operations, the significance of auxiliary registers, and the implications of not using them, all while providing a pictorial representation for clarity.
+Answer
+Overview of the Code
+
+The provided assembly code snippet demonstrates basic stack operations, including pushing and popping values, and printing characters to the screen using BIOS interrupts. The code is structured to manipulate the stack pointer (sp), base pointer (bp), and auxiliary register (al) effectively.
+Initial Setup
+
+language-assembly
+
+mov ah, 0x0e ; Set the function for teletype output
+mov bp, 0x8000 ; Set base pointer to a safe address
+mov sp, bp ; Initialize stack pointer to point to base pointer
+
+    mov ah, 0x0e: This instruction sets up the ah register for teletype output, which is used to print characters to the screen.
+    mov bp, 0x8000: The base pointer is set to 0x8000, a location far from the boot sector (0x7c00), ensuring that the stack does not get overwritten.
+    mov sp, bp: The stack pointer is initialized to point to the same address as the base pointer, indicating that the stack is currently empty.
+
+Pushing Values onto the Stack
+
+language-assembly
+
+push 'A'
+push 'B'
+push 'C'
+
+    The characters 'A', 'B', and 'C' are pushed onto the stack. Each push operation decreases the stack pointer (sp) and stores the character at the new stack location.
+
+Pictorial Representation of the Stack : actaully a-0x7fff , when 'b' comes , then 
+'a-0x7ffe' , so on c comes ... b and a both shft down , .... ==> 
+Address   | Value
+----------|-------
+0x8000   | (empty)
+0x7FFF   | 'C'
+0x7FFE   | 'B'
+0x7FFD   | 'A'
+
+    After the push operations, the stack grows downwards from 0x8000, with 'C' at the top of the stack.
+
+Popping Values from the Stack
+
+language-assembly
+
+pop bx
+mov al, bl
+int 0x10 ; prints C
+
+pop bx
+mov al, bl
+int 0x10 ; prints B
+
+pop bx
+mov al, bl
+int 0x10 ; prints A
+
+    The pop instruction retrieves the top value from the stack into the bx register. The lower byte of bx (bl) is then moved to al, which is used for printing.
+    The int 0x10 instruction is called to print the character stored in al.
+
+Addressing the Questions
+
+    Where is bp pointing?
+        bp points to 0x8000, which is the base of the stack. It serves as a reference point for stack operations.
+
+    Where is bx pointing now?
+        After each pop, bx contains the value that was at the top of the stack. For example, after the first pop, bx will contain 'C', and after the second, it will contain 'B', and so forth.
+
+    Is bx linked to bp?
+        No, bx is not directly linked to bp. bp is used to manage the stack's base address, while bx is a general-purpose register used to temporarily hold values popped from the stack.
+
+    Why do we need an auxiliary register al?
+        The al register is used to hold the lower byte of bx for printing. Since the int 0x10 function expects the character to be in al, it is necessary to transfer the value from bl to al.
+
+    What happens if we don't use al?
+        If we do not use al and attempt to print directly from bl, the program will not function correctly, as int 0x10 specifically requires the character to be in al. This would lead to undefined behavior or no output at all.
+
+Final Code and Conclusion
+
+language-assembly
+
+mov al, [0x8000]
+int 0x10 ; Print garbage data
+
+jmp $ ; Infinite loop
+times 510-($-$$) db 0 ; Fill the rest of the boot sector
+dw 0xaa55 ; Boot signature
+
+    The final part of the code attempts to print the value at 0x8000, which is now garbage data since it has been overwritten by the stack operations.
+
+Summary
+
+In conclusion, understanding the stack operations in assembly language is crucial for effective programming. The use of registers like bp, bx, and al plays a significant role in managing data flow and ensuring that operations are performed correctly. The auxiliary register al is essential for compatibility with BIOS interrupts, and neglecting its use can lead to errors in output. The stack's behavior, as illustrated, highlights the importance of careful memory management in low-level programming.
+
+==> 
+What Happens If AL Is Not Used?
+
+If the AL register is not utilized, the program would not have a means to retrieve the character from the stack for display. The int 0x10 instruction requires a character to be present in AL to function correctly. Without this, the program would either display garbage data or nothing at all, leading to an undefined behavior.
+
+Importance of External Registers
+
+External registers, such as AL, AH, BP, and SP, play a vital role in managing data flow and control in Assembly language. They serve as temporary storage for data manipulation and facilitate communication between the CPU and memory.
+
+    AL: Used for arithmetic operations and data transfer.
+    AH: Often used in conjunction with AL for extended operations.
+    BP: Points to the base of the stack frame, aiding in stack management.
+    SP: Indicates the current top of the stack, crucial for push/pop operations.
+
+Pictorial Representation of Register Usage
+
+Below is a simplified representation of how registers interact with the stack:
+
++-------------------+
+|       Stack       |
+|-------------------|
+| 0x7FFE: 'C'      | <--- SP points here after pushing 'C'
+| 0x7FFC: 'B'      |
+| 0x7FFA: 'A'      |
+| 0x8000: (empty)  |
++-------------------+
+
+Registers:
++-------+-------+-------+
+|  AL   |  AH   |  SP   |
+|-------|-------|-------|
+|  'C'  |  0x0E | 0x7FFE|
++-------+-------+-------+
+
+'''
+
+OUTPUT : 
+A is ==> "A CBA.." , .. MEANS CURSOR MOVED FORWARD EACH POSITION (.. ITS JUST MY REPRESENTATION NOT BY THE QEMU-EMULATOR) 
+
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ nasm -f bin boot_sect_stack.asm -o boot_sect_stack.bin
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ qemu-system-x86_64 boot_sect_stack.bin 
+WARNING: Image format was not specified for 'boot_sect_stack.bin' and probing guessed raw.
+         Automatically detecting the format is dangerous for raw images, write operations on block 0 will be restricted.
+         Specify the 'raw' format explicitly to remove the restrictions.
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ qemu-system-x86_64 -drive format=raw ,file=boot_sect_stack.bin 
+qemu-system-x86_64: -drive format=raw: A block device must be specified for "file"
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ qemu-system-x86_64 -drive format=raw,file=boot_sect_stack.bin 
+
+TO GET THE BINARY 
+binary : 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ xxd boot_sect_stack.bin
+00000000: b40e bd00 8089 ec6a 416a 426a 43a0 fe7f  .......jAjBjC...
+00000010: cd10 a000 80cd 105b 88d8 cd10 5b88 d8cd  .......[....[...
+00000020: 105b 88d8 cd10 a000 80cd 10eb fe00 0000  .[..............
+
+what is that j  now : JUMP and LOAD IMMEDIATE VALUE  "https://en.wikibooks.org/wiki/MIPS_Assembly/Control_Flow_Instructions"  
+
+what is [ , in that , means now we need to fetch the content of top of stack , or any memory address present in any-data-structure  
+refer : "https://unix.stackexchange.com/questions/282215/how-to-view-a-binary-file" for hexdump and xxd wrt binary
+
+how to get only the memory address b40e , use hexdump : 
+==> 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ hexdump boot_sect_stack.bin
+
+0000000 0eb4 00bd 8980 6aec 6a41 6a42 a043 7ffe
+0000010 10cd 00a0 cd80 5b10 d888 10cd 885b cdd8
+0000020 5b10 d888 10cd 00a0 cd80 eb10 00fe 0000
+0000030 0000 0000 0000 0000 0000 0000 0000 0000
+*
+00001f0 0000 0000 0000 0000 0000 0000 0000 aa55
+0000200
+
+
+you can also get the binary address format : use -b flag 
+==> 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ hexdump -b boot_sect_stack.bin
+0000000 264 016 275 000 200 211 354 152 101 152 102 152 103 240 376 177
+0000010 315 020 240 000 200 315 020 133 210 330 315 020 133 210 330 315
+0000020 020 133 210 330 315 020 240 000 200 315 020 353 376 000 000 000
+0000030 000 000 000 000 000 000 000 000 000 000 000 000 000 000 000 000
+*
+00001f0 000 000 000 000 000 000 000 000 000 000 000 000 000 000 125 252
+0000200
+
+WE CAN ALSO GET THE WORKING OF WHOLE dis-ASSEMBLY CODE COMPATIBLE WITH OUR LINUX-64 ARCHITECTURE : use ndisasm , n=nasm compiler techniques 
+==>
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ ndisasm boot_sect_stack.bin
+00000000  B40E              mov ah,0xe
+00000002  BD0080            mov bp,0x8000
+00000005  89EC              mov sp,bp
+00000007  6A41              push byte +0x41
+00000009  6A42              push byte +0x42
+0000000B  6A43              push byte +0x43
+0000000D  A0FE7F            mov al,[0x7ffe]
+00000010  CD10              int 0x10
+00000012  A00080            mov al,[0x8000]
+00000015  CD10              int 0x10
+00000017  5B                pop bx
+00000018  88D8              mov al,bl
+0000001A  CD10              int 0x10
+0000001C  5B                pop bx
+0000001D  88D8              mov al,bl
+0000001F  CD10              int 0x10
+00000021  5B                pop bx
+00000022  88D8              mov al,bl
+00000024  CD10              int 0x10
+00000026  A00080            mov al,[0x8000]
+00000029  CD10              int 0x10
+0000002B  EBFE              jmp short 0x2b
+0000002D  0000              add [bx+si],al
+0000002F  0000              add [bx+si],al
+00000031  0000              add [bx+si],al
+00000033  0000              add [bx+si],al
+00000035  0000              add [bx+si],al
+00000037  0000              add [bx+si],al
+00000039  0000              add [bx+si],al
+0000003B  0000              add [bx+si],al
+0000003D  0000              add [bx+si],al
+0000003F  0000              add [bx+si],al
+00000041  0000              add [bx+si],al
+00000043  0000              add [bx+si],al
+00000045  0000              add [bx+si],al
+00000047  0000              add [bx+si],al
+00000049  0000              add [bx+si],al
+0000004B  0000              add [bx+si],al
+0000004D  0000              add [bx+si],al
+0000004F  0000              add [bx+si],al
+00000051  0000              add [bx+si],al
+00000053  0000              add [bx+si],al
+00000055  0000              add [bx+si],al
+00000057  0000              add [bx+si],al
+00000059  0000              add [bx+si],al
+0000005B  0000              add [bx+si],al
+0000005D  0000              add [bx+si],al
+0000005F  0000              add [bx+si],al
+00000061  0000              add [bx+si],al
+00000063  0000              add [bx+si],al
+00000065  0000              add [bx+si],al
+00000067  0000              add [bx+si],al
+00000069  0000              add [bx+si],al
+0000006B  0000              add [bx+si],al
+0000006D  0000              add [bx+si],al
+0000006F  0000              add [bx+si],al
+00000071  0000              add [bx+si],al
+00000073  0000              add [bx+si],al
+00000075  0000              add [bx+si],al
+00000077  0000              add [bx+si],al
+00000079  0000              add [bx+si],al
+0000007B  0000              add [bx+si],al
+0000007D  0000              add [bx+si],al
+0000007F  0000              add [bx+si],al
+00000081  0000              add [bx+si],al
+00000083  0000              add [bx+si],al
+00000085  0000              add [bx+si],al
+00000087  0000              add [bx+si],al
+00000089  0000              add [bx+si],al
+0000008B  0000              add [bx+si],al
+0000008D  0000              add [bx+si],al
+0000008F  0000              add [bx+si],al
+00000091  0000              add [bx+si],al
+00000093  0000              add [bx+si],al
+00000095  0000              add [bx+si],al
+00000097  0000              add [bx+si],al
+00000099  0000              add [bx+si],al
+0000009B  0000              add [bx+si],al
+0000009D  0000              add [bx+si],al
+0000009F  0000              add [bx+si],al
+000000A1  0000              add [bx+si],al
+000000A3  0000              add [bx+si],al
+000000A5  0000              add [bx+si],al
+000000A7  0000              add [bx+si],al
+000000A9  0000              add [bx+si],al
+000000AB  0000              add [bx+si],al
+000000AD  0000              add [bx+si],al
+000000AF  0000              add [bx+si],al
+000000B1  0000              add [bx+si],al
+000000B3  0000              add [bx+si],al
+000000B5  0000              add [bx+si],al
+000000B7  0000              add [bx+si],al
+000000B9  0000              add [bx+si],al
+000000BB  0000              add [bx+si],al
+000000BD  0000              add [bx+si],al
+000000BF  0000              add [bx+si],al
+000000C1  0000              add [bx+si],al
+000000C3  0000              add [bx+si],al
+000000C5  0000              add [bx+si],al
+000000C7  0000              add [bx+si],al
+000000C9  0000              add [bx+si],al
+000000CB  0000              add [bx+si],al
+000000CD  0000              add [bx+si],al
+000000CF  0000              add [bx+si],al
+000000D1  0000              add [bx+si],al
+000000D3  0000              add [bx+si],al
+000000D5  0000              add [bx+si],al
+000000D7  0000              add [bx+si],al
+000000D9  0000              add [bx+si],al
+000000DB  0000              add [bx+si],al
+000000DD  0000              add [bx+si],al
+000000DF  0000              add [bx+si],al
+000000E1  0000              add [bx+si],al
+000000E3  0000              add [bx+si],al
+000000E5  0000              add [bx+si],al
+000000E7  0000              add [bx+si],al
+000000E9  0000              add [bx+si],al
+000000EB  0000              add [bx+si],al
+000000ED  0000              add [bx+si],al
+000000EF  0000              add [bx+si],al
+000000F1  0000              add [bx+si],al
+000000F3  0000              add [bx+si],al
+000000F5  0000              add [bx+si],al
+000000F7  0000              add [bx+si],al
+000000F9  0000              add [bx+si],al
+000000FB  0000              add [bx+si],al
+000000FD  0000              add [bx+si],al
+000000FF  0000              add [bx+si],al
+00000101  0000              add [bx+si],al
+00000103  0000              add [bx+si],al
+00000105  0000              add [bx+si],al
+00000107  0000              add [bx+si],al
+00000109  0000              add [bx+si],al
+0000010B  0000              add [bx+si],al
+0000010D  0000              add [bx+si],al
+0000010F  0000              add [bx+si],al
+00000111  0000              add [bx+si],al
+00000113  0000              add [bx+si],al
+00000115  0000              add [bx+si],al
+00000117  0000              add [bx+si],al
+00000119  0000              add [bx+si],al
+0000011B  0000              add [bx+si],al
+0000011D  0000              add [bx+si],al
+0000011F  0000              add [bx+si],al
+00000121  0000              add [bx+si],al
+00000123  0000              add [bx+si],al
+00000125  0000              add [bx+si],al
+00000127  0000              add [bx+si],al
+00000129  0000              add [bx+si],al
+0000012B  0000              add [bx+si],al
+0000012D  0000              add [bx+si],al
+0000012F  0000              add [bx+si],al
+00000131  0000              add [bx+si],al
+00000133  0000              add [bx+si],al
+00000135  0000              add [bx+si],al
+00000137  0000              add [bx+si],al
+00000139  0000              add [bx+si],al
+0000013B  0000              add [bx+si],al
+0000013D  0000              add [bx+si],al
+0000013F  0000              add [bx+si],al
+00000141  0000              add [bx+si],al
+00000143  0000              add [bx+si],al
+00000145  0000              add [bx+si],al
+00000147  0000              add [bx+si],al
+00000149  0000              add [bx+si],al
+0000014B  0000              add [bx+si],al
+0000014D  0000              add [bx+si],al
+0000014F  0000              add [bx+si],al
+00000151  0000              add [bx+si],al
+00000153  0000              add [bx+si],al
+00000155  0000              add [bx+si],al
+00000157  0000              add [bx+si],al
+00000159  0000              add [bx+si],al
+0000015B  0000              add [bx+si],al
+0000015D  0000              add [bx+si],al
+0000015F  0000              add [bx+si],al
+00000161  0000              add [bx+si],al
+00000163  0000              add [bx+si],al
+00000165  0000              add [bx+si],al
+00000167  0000              add [bx+si],al
+00000169  0000              add [bx+si],al
+0000016B  0000              add [bx+si],al
+0000016D  0000              add [bx+si],al
+0000016F  0000              add [bx+si],al
+00000171  0000              add [bx+si],al
+00000173  0000              add [bx+si],al
+00000175  0000              add [bx+si],al
+00000177  0000              add [bx+si],al
+00000179  0000              add [bx+si],al
+0000017B  0000              add [bx+si],al
+0000017D  0000              add [bx+si],al
+0000017F  0000              add [bx+si],al
+00000181  0000              add [bx+si],al
+00000183  0000              add [bx+si],al
+00000185  0000              add [bx+si],al
+00000187  0000              add [bx+si],al
+00000189  0000              add [bx+si],al
+0000018B  0000              add [bx+si],al
+0000018D  0000              add [bx+si],al
+0000018F  0000              add [bx+si],al
+00000191  0000              add [bx+si],al
+00000193  0000              add [bx+si],al
+00000195  0000              add [bx+si],al
+00000197  0000              add [bx+si],al
+00000199  0000              add [bx+si],al
+0000019B  0000              add [bx+si],al
+0000019D  0000              add [bx+si],al
+0000019F  0000              add [bx+si],al
+000001A1  0000              add [bx+si],al
+000001A3  0000              add [bx+si],al
+000001A5  0000              add [bx+si],al
+000001A7  0000              add [bx+si],al
+000001A9  0000              add [bx+si],al
+000001AB  0000              add [bx+si],al
+000001AD  0000              add [bx+si],al
+000001AF  0000              add [bx+si],al
+000001B1  0000              add [bx+si],al
+000001B3  0000              add [bx+si],al
+000001B5  0000              add [bx+si],al
+000001B7  0000              add [bx+si],al
+000001B9  0000              add [bx+si],al
+000001BB  0000              add [bx+si],al
+000001BD  0000              add [bx+si],al
+000001BF  0000              add [bx+si],al
+000001C1  0000              add [bx+si],al
+000001C3  0000              add [bx+si],al
+000001C5  0000              add [bx+si],al
+000001C7  0000              add [bx+si],al
+000001C9  0000              add [bx+si],al
+000001CB  0000              add [bx+si],al
+000001CD  0000              add [bx+si],al
+000001CF  0000              add [bx+si],al
+000001D1  0000              add [bx+si],al
+000001D3  0000              add [bx+si],al
+000001D5  0000              add [bx+si],al
+000001D7  0000              add [bx+si],al
+000001D9  0000              add [bx+si],al
+000001DB  0000              add [bx+si],al
+000001DD  0000              add [bx+si],al
+000001DF  0000              add [bx+si],al
+000001E1  0000              add [bx+si],al
+000001E3  0000              add [bx+si],al
+000001E5  0000              add [bx+si],al
+000001E7  0000              add [bx+si],al
+000001E9  0000              add [bx+si],al
+000001EB  0000              add [bx+si],al
+000001ED  0000              add [bx+si],al
+000001EF  0000              add [bx+si],al
+000001F1  0000              add [bx+si],al
+000001F3  0000              add [bx+si],al
+000001F5  0000              add [bx+si],al
+000001F7  0000              add [bx+si],al
+000001F9  0000              add [bx+si],al
+000001FB  0000              add [bx+si],al
+000001FD  0055AA            add [di-0x56],dl
+'''
+
+BEST REFERENCE FOR DISASSEMBLY OF CODE , EITHER C OR CPP OR ASSEMBLY  : 
+"refer" : "https://www.baeldung.com/linux/disassemble-machine-code"
+
+
+"
+i want for 32 bit , now for my server of 32 bit compatibility ==> 
+==>
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/04-bootsector-stack$ ndisasm -b32 boot_sect_stack.asm
+00000000  6D                insd
+00000001  6F                outsd
+00000002  7620              jna 0x24
+00000004  61                popa
+00000005  682C203078        push dword 0x7830202c
+0000000A  306520            xor [ebp+0x20],ah
+0000000D  3B20              cmp esp,[eax]
+0000000F  7474              jz 0x85
+00000011  7920              jns 0x33
+00000013  6D                insd
+00000014  6F                outsd
+00000015  64650A0A          or cl,[gs:edx]
+00000019  6D                insd
+0000001A  6F                outsd
+0000001B  7620              jna 0x3d
+0000001D  62702C            bound esi,[eax+0x2c]
+00000020  2030              and [eax],dh
+00000022  7838              js 0x5c
+00000024  3030              xor [eax],dh
+00000026  3020              xor [eax],ah
+00000028  3B20              cmp esp,[eax]
+0000002A  7468              jz 0x94
+0000002C  69732069732061    imul esi,[ebx+0x20],dword 0x61207369
+00000033  6E                outsb
+00000034  206164            and [ecx+0x64],ah
+00000037  647265            fs jc 0x9f
+0000003A  7373              jnc 0xaf
+0000003C  206661            and [esi+0x61],ah
+0000003F  7220              jc 0x61
+00000041  61                popa
+00000042  7761              ja 0xa5
+00000044  7920              jns 0x66
+00000046  66726F            o16 jc 0xb8
+00000049  6D                insd
+0000004A  2030              and [eax],dh
+0000004C  7837              js 0x85
+0000004E  6330              arpl [eax],si
+00000050  3020              xor [eax],ah
+00000052  736F              jnc 0xc3
+00000054  20746861          and [eax+ebp*2+0x61],dh
+00000058  7420              jz 0x7a
+0000005A  7765              ja 0xc1
+0000005C  20646F6E          and [edi+ebp*2+0x6e],ah
+00000060  27                daa
+00000061  7420              jz 0x83
+00000063  67657420          gs jz 0x87
+00000067  6F                outsd
+00000068  7665              jna 0xcf
+0000006A  7277              jc 0xe3
+0000006C  7269              jc 0xd7
+0000006E  7474              jz 0xe4
+00000070  656E              gs outsb
+00000072  0A6D6F            or ch,[ebp+0x6f]
+00000075  7620              jna 0x97
+00000077  7370              jnc 0xe9
+00000079  2C20              sub al,0x20
+0000007B  627020            bound esi,[eax+0x20]
+0000007E  3B20              cmp esp,[eax]
+00000080  69662074686520    imul esp,[esi+0x20],dword 0x20656874
+00000087  7374              jnc 0xfd
+00000089  61                popa
+0000008A  636B20            arpl [ebx+0x20],bp
+0000008D  697320656D7074    imul esi,[ebx+0x20],dword 0x74706d65
+00000094  7920              jns 0xb6
+00000096  7468              jz 0x100
+00000098  656E              gs outsb
+0000009A  207370            and [ebx+0x70],dh
+0000009D  20706F            and [eax+0x6f],dh
+000000A0  696E747320746F    imul ebp,[esi+0x74],dword 0x6f742073
+000000A7  206270            and [edx+0x70],ah
+000000AA  0A0A              or cl,[edx]
+000000AC  7075              jo 0x123
+000000AE  7368              jnc 0x118
+000000B0  2027              and [edi],ah
+000000B2  41                inc ecx
+000000B3  27                daa
+000000B4  0A7075            or dh,[eax+0x75]
+000000B7  7368              jnc 0x121
+000000B9  2027              and [edi],ah
+000000BB  42                inc edx
+000000BC  27                daa
+000000BD  0A7075            or dh,[eax+0x75]
+000000C0  7368              jnc 0x12a
+000000C2  2027              and [edi],ah
+000000C4  43                inc ebx
+000000C5  27                daa
+000000C6  0A0A              or cl,[edx]
+000000C8  3B20              cmp esp,[eax]
+000000CA  746F              jz 0x13b
+000000CC  207368            and [ebx+0x68],dh
+000000CF  6F                outsd
+000000D0  7720              ja 0xf2
+000000D2  686F772074        push dword 0x7420776f
+000000D7  6865207374        push dword 0x74732065
+000000DC  61                popa
+000000DD  636B20            arpl [ebx+0x20],bp
+000000E0  67726F            jc 0x152
+000000E3  7773              ja 0x158
+000000E5  20646F77          and [edi+ebp*2+0x77],ah
+000000E9  6E                outsb
+000000EA  7761              ja 0x14d
+000000EC  7264              jc 0x152
+000000EE  730A              jnc 0xfa
+000000F0  6D                insd
+000000F1  6F                outsd
+000000F2  7620              jna 0x114
+000000F4  61                popa
+000000F5  6C                insb
+000000F6  2C20              sub al,0x20
+000000F8  5B                pop ebx
+000000F9  307837            xor [eax+0x37],bh
+000000FC  6666655D          gs pop bp
+00000100  203B              and [ebx],bh
+00000102  2030              and [eax],dh
+00000104  7838              js 0x13e
+00000106  3030              xor [eax],dh
+00000108  3020              xor [eax],ah
+0000010A  2D20320A69        sub eax,0x690a3220
+0000010F  6E                outsb
+00000110  7420              jz 0x132
+00000112  307831            xor [eax+0x31],bh
+00000115  300A              xor [edx],cl
+00000117  0A3B              or bh,[ebx]
+00000119  20686F            and [eax+0x6f],ch
+0000011C  7765              ja 0x183
+0000011E  7665              jna 0x185
+00000120  722C              jc 0x14e
+00000122  20646F6E          and [edi+ebp*2+0x6e],ah
+00000126  27                daa
+00000127  7420              jz 0x149
+00000129  7472              jz 0x19d
+0000012B  7920              jns 0x14d
+0000012D  746F              jz 0x19e
+0000012F  206163            and [ecx+0x63],ah
+00000132  636573            arpl [ebp+0x73],sp
+00000135  7320              jnc 0x157
+00000137  5B                pop ebx
+00000138  307838            xor [eax+0x38],bh
+0000013B  3030              xor [eax],dh
+0000013D  305D20            xor [ebp+0x20],bl
+00000140  6E                outsb
+00000141  6F                outsd
+00000142  772C              ja 0x170
+00000144  206265            and [edx+0x65],ah
+00000147  636175            arpl [ecx+0x75],sp
+0000014A  7365              jnc 0x1b1
+0000014C  206974            and [ecx+0x74],ch
+0000014F  20776F            and [edi+0x6f],dh
+00000152  6E                outsb
+00000153  27                daa
+00000154  7420              jz 0x176
+00000156  776F              ja 0x1c7
+00000158  726B              jc 0x1c5
+0000015A  0A3B              or bh,[ebx]
+0000015C  20796F            and [ecx+0x6f],bh
+0000015F  7520              jnz 0x181
+00000161  63616E            arpl [ecx+0x6e],sp
+00000164  206F6E            and [edi+0x6e],ch
+00000167  6C                insb
+00000168  7920              jns 0x18a
+0000016A  61                popa
+0000016B  636365            arpl [ebx+0x65],sp
+0000016E  7373              jnc 0x1e3
+00000170  20746865          and [eax+ebp*2+0x65],dh
+00000174  207374            and [ebx+0x74],dh
+00000177  61                popa
+00000178  636B20            arpl [ebx+0x20],bp
+0000017B  746F              jz 0x1ec
+0000017D  7020              jo 0x19f
+0000017F  736F              jnc 0x1f0
+00000181  2C20              sub al,0x20
+00000183  61                popa
+00000184  7420              jz 0x1a6
+00000186  7468              jz 0x1f0
+00000188  697320706F696E    imul esi,[ebx+0x20],dword 0x6e696f70
+0000018F  742C              jz 0x1bd
+00000191  206F6E            and [edi+0x6e],ch
+00000194  6C                insb
+00000195  7920              jns 0x1b7
+00000197  307837            xor [eax+0x37],bh
+0000019A  6666652028        o16 and [gs:eax],ch
+0000019F  6C                insb
+000001A0  6F                outsd
+000001A1  6F                outsd
+000001A2  6B2061            imul esp,[eax],byte +0x61
+000001A5  626F76            bound ebp,[edi+0x76]
+000001A8  65290A            sub [gs:edx],ecx
+000001AB  6D                insd
+000001AC  6F                outsd
+000001AD  7620              jna 0x1cf
+000001AF  61                popa
+000001B0  6C                insb
+000001B1  2C20              sub al,0x20
+000001B3  5B                pop ebx
+000001B4  307838            xor [eax+0x38],bh
+000001B7  3030              xor [eax],dh
+000001B9  305D0A            xor [ebp+0xa],bl
+000001BC  696E7420307831    imul ebp,[esi+0x74],dword 0x31783020
+000001C3  300A              xor [edx],cl
+000001C5  0A0A              or cl,[edx]
+000001C7  3B20              cmp esp,[eax]
+000001C9  7265              jc 0x230
+000001CB  636F76            arpl [edi+0x76],bp
+000001CE  657220            gs jc 0x1f1
+000001D1  6F                outsd
+000001D2  7572              jnz 0x246
+000001D4  206368            and [ebx+0x68],ah
+000001D7  61                popa
+000001D8  7261              jc 0x23b
+000001DA  63746572          arpl [ebp+0x72],si
+000001DE  7320              jnc 0x200
+000001E0  7573              jnz 0x255
+000001E2  696E6720746865    imul ebp,[esi+0x67],dword 0x65687420
+000001E9  207374            and [ebx+0x74],dh
+000001EC  61                popa
+000001ED  6E                outsb
+000001EE  6461              fs popa
+000001F0  7264              jc 0x256
+000001F2  207072            and [eax+0x72],dh
+000001F5  6F                outsd
+000001F6  636564            arpl [ebp+0x64],sp
+000001F9  7572              jnz 0x26d
+000001FB  653A20            cmp ah,[gs:eax]
+000001FE  27                daa
+000001FF  706F              jo 0x270
+00000201  7027              jo 0x22a
+00000203  0A3B              or bh,[ebx]
+00000205  205765            and [edi+0x65],dl
+00000208  206361            and [ebx+0x61],ah
+0000020B  6E                outsb
+0000020C  206F6E            and [edi+0x6e],ch
+0000020F  6C                insb
+00000210  7920              jns 0x232
+00000212  706F              jo 0x283
+00000214  7020              jo 0x236
+00000216  66756C            o16 jnz 0x285
+00000219  6C                insb
+0000021A  20776F            and [edi+0x6f],dh
+0000021D  7264              jc 0x283
+0000021F  7320              jnc 0x241
+00000221  736F              jnc 0x292
+00000223  207765            and [edi+0x65],dh
+00000226  206E65            and [esi+0x65],ch
+00000229  656420616E        and [fs:ecx+0x6e],ah
+0000022E  206175            and [ecx+0x75],ah
+00000231  7869              js 0x29c
+00000233  6C                insb
+00000234  69617279207265    imul esp,[ecx+0x72],dword 0x65722079
+0000023B  6769737465722074  imul esi,[bp+di+0x74],dword 0x74207265
+00000243  6F                outsd
+00000244  206D61            and [ebp+0x61],ch
+00000247  6E                outsb
+00000248  6970756C617465    imul esi,[eax+0x75],dword 0x6574616c
+0000024F  0A3B              or bh,[ebx]
+00000251  20746865          and [eax+ebp*2+0x65],dh
+00000255  206C6F77          and [edi+ebp*2+0x77],ch
+00000259  657220            gs jc 0x27c
+0000025C  627974            bound edi,[ecx+0x74]
+0000025F  650A706F          or dh,[gs:eax+0x6f]
+00000263  7020              jo 0x285
+00000265  62780A            bound edi,[eax+0xa]
+00000268  6D                insd
+00000269  6F                outsd
+0000026A  7620              jna 0x28c
+0000026C  61                popa
+0000026D  6C                insb
+0000026E  2C20              sub al,0x20
+00000270  626C0A69          bound ebp,[edx+ecx+0x69]
+00000274  6E                outsb
+00000275  7420              jz 0x297
+00000277  307831            xor [eax+0x31],bh
+0000027A  3020              xor [eax],ah
+0000027C  3B20              cmp esp,[eax]
+0000027E  7072              jo 0x2f2
+00000280  696E747320430A    imul ebp,[esi+0x74],dword 0xa432073
+00000287  0A706F            or dh,[eax+0x6f]
+0000028A  7020              jo 0x2ac
+0000028C  62780A            bound edi,[eax+0xa]
+0000028F  6D                insd
+00000290  6F                outsd
+00000291  7620              jna 0x2b3
+00000293  61                popa
+00000294  6C                insb
+00000295  2C20              sub al,0x20
+00000297  626C0A69          bound ebp,[edx+ecx+0x69]
+0000029B  6E                outsb
+0000029C  7420              jz 0x2be
+0000029E  307831            xor [eax+0x31],bh
+000002A1  3020              xor [eax],ah
+000002A3  3B20              cmp esp,[eax]
+000002A5  7072              jo 0x319
+000002A7  696E747320420A    imul ebp,[esi+0x74],dword 0xa422073
+000002AE  0A706F            or dh,[eax+0x6f]
+000002B1  7020              jo 0x2d3
+000002B3  62780A            bound edi,[eax+0xa]
+000002B6  6D                insd
+000002B7  6F                outsd
+000002B8  7620              jna 0x2da
+000002BA  61                popa
+000002BB  6C                insb
+000002BC  2C20              sub al,0x20
+000002BE  626C0A69          bound ebp,[edx+ecx+0x69]
+000002C2  6E                outsb
+000002C3  7420              jz 0x2e5
+000002C5  307831            xor [eax+0x31],bh
+000002C8  3020              xor [eax],ah
+000002CA  3B20              cmp esp,[eax]
+000002CC  7072              jo 0x340
+000002CE  696E747320410A    imul ebp,[esi+0x74],dword 0xa412073
+000002D5  0A3B              or bh,[ebx]
+000002D7  20646174          and [ecx+0x74],ah
+000002DB  61                popa
+000002DC  20746861          and [eax+ebp*2+0x61],dh
+000002E0  7420              jz 0x302
+000002E2  6861732062        push dword 0x62207361
+000002E7  65656E            gs outsb
+000002EA  20706F            and [eax+0x6f],dh
+000002ED  7027              jo 0x316
+000002EF  64206672          and [fs:esi+0x72],ah
+000002F3  6F                outsd
+000002F4  6D                insd
+000002F5  20746865          and [eax+ebp*2+0x65],dh
+000002F9  207374            and [ebx+0x74],dh
+000002FC  61                popa
+000002FD  636B20            arpl [ebx+0x20],bp
+00000300  69732067617262    imul esi,[ebx+0x20],dword 0x62726167
+00000307  61                popa
+00000308  6765206E6F        and [gs:bp+0x6f],ch
+0000030D  770A              ja 0x319
+0000030F  6D                insd
+00000310  6F                outsd
+00000311  7620              jna 0x333
+00000313  61                popa
+00000314  6C                insb
+00000315  2C20              sub al,0x20
+00000317  5B                pop ebx
+00000318  307838            xor [eax+0x38],bh
+0000031B  3030              xor [eax],dh
+0000031D  305D0A            xor [ebp+0xa],bl
+00000320  696E7420307831    imul ebp,[esi+0x74],dword 0x31783020
+00000327  300A              xor [edx],cl
+00000329  0A0A              or cl,[edx]
+0000032B  6A6D              push byte +0x6d
+0000032D  7020              jo 0x34f
+0000032F  240A              and al,0xa
+00000331  7469              jz 0x39c
+00000333  6D                insd
+00000334  657320            gs jnc 0x357
+00000337  3531302D28        xor eax,0x282d3031
+0000033C  242D              and al,0x2d
+0000033E  2424              and al,0x24
+00000340  2920              sub [eax],esp
+00000342  646220            bound esp,[fs:eax]
+00000345  300A              xor [edx],cl
+00000347  647720            fs ja 0x36a
+0000034A  307861            xor [eax+0x61],bh
+0000034D  61                popa
+0000034E  35                db 0x35
+0000034F  35                db 0x35
+00000350  0A                db 0x0a
+
+
+u can also generate 16 bit mode or 8bit-mode using same commnd but flag ==> "-bn" , n is the number of bit modes 
+
+notice ==> insd and outsd common registers from 32-6 bit compatability ==> "https://stackoverflow.com/questions/3215878/what-are-in-out-instructions-in-x86-used-for" ==> input-ouput , s=string , d=double-word
+"
+

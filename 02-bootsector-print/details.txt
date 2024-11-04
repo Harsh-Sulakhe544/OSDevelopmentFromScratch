@@ -1,0 +1,156 @@
+what is tty : "https://itsfoss.com/what-is-tty-in-linux/"
+
+BEST ARTICLE FOR TTY : "https://ladyitris.wordpress.com/adding-text-to-our-screen/" ==> MUST READ 
+you can try out "tty": 
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/02-bootsector-print$ tty
+/dev/pts/1
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/02-bootsector-print$ who
+harsh    :0           2024-10-25 14:57 (:0)
+
+
+what is tty : VIRTUAL terminal session :
+ WE CAN MODIFY THE SESSIONS , TTY ==> CHECK FOR NAutoVTs IN 
+
+ harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/02-bootsector-print$ sudo nano /etc/systemd/logind.conf
+[sudo] password for harsh: 
+
+"0x0E is the BIOS function for writing characters in TTY mode"
+OR READ THE WHOLE ARTICLE : VERY USEFUL 
+ "https://medium.com/@asvinjangid.kumar/expanding-terminal-capacity-adding-multiple-ttys-in-linux-46932f594885"
+
+what is 0x0e ?: https://forum.osdev.org/viewtopic.php?t=31031
+
+    Setting Up TTY Mode:
+        mov ah, 0x0e: This instruction sets the function number for the BIOS interrupt 0x10 to 0x0E, which is used for writing a character to the screen in TTY mode.
+
+    Displaying Characters:
+        Each character is loaded into the AL register and then displayed using the int 0x10 instruction.
+        The sequence of instructions for displaying "Hello" is as follows:
+            mov al, 'H' followed by int 0x10 displays 'H'.
+            mov al, 'e' followed by int 0x10 displays 'e'.
+            mov al, 'l' followed by int 0x10 displays 'l'.
+            The second int 0x10 is used to display another 'l' since 'l' is still in AL.
+            mov al, 'o' followed by int 0x10 displays 'o'.
+
+    Infinite Loop:
+        jmp $: This instruction creates an infinite loop, preventing the program from terminating. The $ symbol refers to the current address, effectively causing the program to loop indefinitely.
+
+    Padding and Magic Number:
+        times 510 - ($-$$) db 0: This line pads the program to ensure it is 510 bytes long, which is necessary for bootable code.
+        dw 0xaa55: This is the boot signature that indicates the end of the boot sector.
+
+Dry Run of the Code
+
+Let's perform a dry run of the code to see how it executes:
+
+    Initial State:
+        Registers: AH = ?, AL = ?
+        Screen: Blank
+
+    Execution Steps:
+        mov ah, 0x0e: Set AH to 0x0E.
+        mov al, 'H': Set AL to ASCII value of 'H' (0x48).
+        int 0x10: Display 'H' on the screen.
+        mov al, 'e': Set AL to ASCII value of 'e' (0x65).
+        int 0x10: Display 'e' on the screen.
+        mov al, 'l': Set AL to ASCII value of 'l' (0x6C).
+        int 0x10: Display 'l' on the screen.
+        int 0x10: Display another 'l' (since 'l' is still in AL).
+        mov al, 'o': Set AL to ASCII value of 'o' (0x6F).
+        int 0x10: Display 'o' on the screen.
+        jmp $: Enter an infinite loop.
+
+    Final State:
+        Registers: AH = 0x0E, AL = 0x6F
+        Screen: Displays "Hello"
+
+Memory Stack Address Representation
+
+To visualize the memory stack address, we can represent the stack as follows:
+
+Address    | Value
+-----------|-------
+0x0000    | 0x0E  ; AH
+0x0001    | 0x48  ; AL ('H')
+0x0002    | 0x65  ; AL ('e')
+0x0003    | 0x6C  ; AL ('l')
+0x0004    | 0x6C  ; AL ('l')
+0x0005    | 0x6F  ; AL ('o')
+0x0006    | 0x00  ; Padding
+...        | ...
+0x01FE    | 0x00  ; Padding
+0x01FF    | 0x55  ; Boot signature
+
+Conclusion
+
+This Assembly code effectively demonstrates how to output a simple string to the screen using BIOS interrupts. The dry run illustrates the step-by-step execution of the program, while the memory stack address representation provides insight into how data is stored in memory during execution. Understanding these concepts is crucial for anyone looking to delve deeper into low-level programming and system operations.
+
+commands running : "
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/02-bootsector-print$ nasm -fbin boot_sect_hello.asm -o boot_sect_hello.bin
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/02-bootsector-print$ qemu boot_sect_hello.bin
+
+Command 'qemu' not found, did you mean:
+
+  command 'aqemu' from deb aqemu (0.9.2-2.3build1)
+
+Try: sudo apt install <deb name>
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/02-bootsector-print$ qemu-system-x86_64  boot_sect_hello.bin
+WARNING: Image format was not specified for 'boot_sect_hello.bin' and probing guessed raw.
+         Automatically detecting the format is dangerous for raw images, write operations on block 0 will be restricted.
+         Specify the 'raw' format explicitly to remove the restrictions.
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/02-bootsector-print$ qemu-system-x86_64 -drive format=raw,file=boot_sect_hello.bin
+
+"
+
+extrA reference : "https://unix.stackexchange.com/questions/138342/how-to-read-write-to-tty-device"
+"https://superuser.com/questions/131044/how-do-i-know-which-dev-ttys-is-my-serial-port"
+
+
+"
+harsh@harsh-P6-2010IX:/$ cat /proc/tty/driver/serial
+cat: /proc/tty/driver/serial: Permission denied
+harsh@harsh-P6-2010IX:/$ sudo cat /proc/tty/driver/serial
+[sudo] password for harsh: 
+serinfo:1.0 driver revision:
+0: uart:unknown port:000003F8 irq:4
+1: uart:unknown port:000002F8 irq:3
+2: uart:unknown port:000003E8 irq:4
+3: uart:unknown port:000002E8 irq:3
+4: uart:unknown port:00000000 irq:0
+5: uart:unknown port:00000000 irq:0
+6: uart:unknown port:00000000 irq:0
+7: uart:unknown port:00000000 irq:0
+8: uart:unknown port:00000000 irq:0
+9: uart:unknown port:00000000 irq:0
+10: uart:unknown port:00000000 irq:0
+11: uart:unknown port:00000000 irq:0
+12: uart:unknown port:00000000 irq:0
+13: uart:unknown port:00000000 irq:0
+14: uart:unknown port:00000000 irq:0
+15: uart:unknown port:00000000 irq:0
+16: uart:unknown port:00000000 irq:0
+17: uart:unknown port:00000000 irq:0
+18: uart:unknown port:00000000 irq:0
+19: uart:unknown port:00000000 irq:0
+20: uart:unknown port:00000000 irq:0
+21: uart:unknown port:00000000 irq:0
+22: uart:unknown port:00000000 irq:0
+23: uart:unknown port:00000000 irq:0
+24: uart:unknown port:00000000 irq:0
+25: uart:unknown port:00000000 irq:0
+26: uart:unknown port:00000000 irq:0
+27: uart:unknown port:00000000 irq:0
+28: uart:unknown port:00000000 irq:0
+29: uart:unknown port:00000000 irq:0
+30: uart:unknown port:00000000 irq:0
+31: uart:unknown port:00000000 irq:0
+
+"
+
+"
+harsh@harsh-P6-2010IX:/$ dmesg | grep tty
+[    0.070987] printk: console [tty0] enabled
+"

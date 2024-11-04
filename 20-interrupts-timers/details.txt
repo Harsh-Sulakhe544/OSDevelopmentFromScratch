@@ -1,0 +1,1 @@
+"https://aeb.win.tue.nl/linux/kbd/scancodes-1.html" ==> keyboard scan codes --best-main reference 

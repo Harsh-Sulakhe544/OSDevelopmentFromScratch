@@ -1,0 +1,100 @@
+GOLDEN PAGE I WAS SEARCHING FOR CPP PROJECTS ==> "https://wiki.osdev.org/Bare_Bones"
+"https://wiki.osdev.org/Expanded_Main_Page" ==> GOLDEN PAGE FOR PROJECTS 
+"https://www.cs.bham.ac.uk/~exr/lectures/opsys/10_11/lectures/os-dev.pdf" ==> REFER FROM CHAPTER 4 , ENTERING INTO 32 BIT MODE ==> best reference 
+'''
+EXPLANATION : 0xffffffff TO DECIMAL 4294967295 : 
+For example, in 32-bit mode, the hexadecimal value 0xFFFFFFFF is equivalent to the decimal value of "-1". In 64-bit mode, however, the decimal equivalent is 4294967295.
+	
+Very Detailed Answer: Understanding Global Descriptor Table (GDT) in Assembly Language
+Question Summary
+
+The question seeks a detailed explanation of the Global Descriptor Table (GDT) in Assembly language, including a simple example, a dry run, and a pictorial representation of the provided GDT code snippet.
+Answer
+
+The Global Descriptor Table (GDT) is a crucial data structure used in x86 architecture to define the characteristics of the various memory segments. It plays a vital role in memory management and protection in operating systems. Let's break down the provided GDT code snippet step by step, followed by a dry run and a pictorial representation.
+GDT Code Breakdown
+
+language-assembly
+
+gdt_start: ; don't remove the labels, they're needed to compute sizes and jumps
+    dd 0x0 ; 4 byte
+    dd 0x0 ; 4 byte
+
+; GDT for code segment. base = 0x00000000, length = 0xfffff
+gdt_code: 
+    dw 0xffff    ; segment length, bits 0-15
+    dw 0x0       ; segment base, bits 0-15
+    db 0x0       ; segment base, bits 16-23
+    db 10011010b ; flags (8 bits)
+    db 11001111b ; flags (4 bits) + segment length, bits 16-19
+    db 0x0       ; segment base, bits 24-31
+
+; GDT for data segment. base and length identical to code segment
+gdt_data:
+    dw 0xffff
+    dw 0x0
+    db 0x0
+    db 10010010b
+    db 11001111b
+    db 0x0
+
+gdt_end:
+
+; GDT descriptor
+gdt_descriptor:
+    dw gdt_end - gdt_start - 1 ; size (16 bit), always one less of its true size
+    dd gdt_start ; address (32 bit)
+
+; define some constants for later use
+CODE_SEG equ gdt_code - gdt_start
+DATA_SEG equ gdt_data - gdt_start
+
+Explanation of the Code
+
+    GDT Structure: The GDT starts with a null descriptor, which is essential for the CPU to operate correctly. The first two dd 0x0 lines create an empty descriptor.
+
+    Code Segment Descriptor:
+        dw 0xffff: This specifies the segment length (0xFFFF), indicating the maximum size of the segment.
+        dw 0x0: This is the lower 16 bits of the segment base address, which is set to 0.
+        db 0x0: This is the next 8 bits of the segment base address.
+        db 10011010b: This byte contains flags that define the segment's properties, such as whether it is executable and readable.
+        db 11001111b: This byte combines additional flags and the upper bits of the segment length.
+        db 0x0: This is the upper 8 bits of the segment base address.
+
+    Data Segment Descriptor: The data segment descriptor is similar to the code segment descriptor but has different flags to indicate that it is writable and not executable.
+
+    GDT Descriptor: This structure defines the size and address of the GDT. The size is calculated as the difference between the end and start of the GDT, minus one.
+
+    Constants: The CODE_SEG and DATA_SEG constants are defined to simplify referencing the offsets of the code and data segments.
+
+Dry Run Example
+
+Let's perform a dry run of the GDT initialization:
+
+    Initialization: The GDT starts at gdt_start. The first two entries are null descriptors.
+    Code Segment: The code segment is defined with a length of 0xFFFF and a base address of 0. The flags indicate it is executable and readable.
+    Data Segment: The data segment mirrors the code segment in size and base but has different flags indicating it is writable.
+    Descriptor Creation: The GDT descriptor is created, specifying the size and address of the GDT.
+
+Pictorial Representation
+
+Below is a simplified pictorial representation of the GDT structure:
+
++-------------------+
+| Null Descriptor   |  (0x0)
++-------------------+
+| Code Segment      |  (Base: 0x00000000, Length: 0xFFFF)
+| Flags: 10011010   |
++-------------------+
+| Data Segment      |  (Base: 0x00000000, Length: 0xFFFF)
+| Flags: 10010010   |
++-------------------+
+
+Conclusion
+
+The Global Descriptor Table is a fundamental component of memory management in x86 architecture. Understanding its structure and how to define segments is crucial for developing low-level applications and operating systems. The provided code snippet illustrates how to set up a GDT with both code and data segments, ensuring proper memory access and protection. By following the dry run and pictorial representation, one can grasp the GDT's role in the system's architecture effectively.
+'''
+
+how to sue dd , dw, dr registers : 
+"https://stackoverflow.com/questions/10168743/which-variable-size-to-use-db-dw-dd-with-x86-assembly"
+"https://www.tutorialspoint.com/assembly_programming/assembly_variables.htm" ==> easy 

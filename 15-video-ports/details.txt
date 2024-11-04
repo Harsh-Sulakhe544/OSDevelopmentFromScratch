@@ -1,0 +1,248 @@
+THIS IS A VGA-PORT CONFIGURING : WE ARE WRITING A VGA DRIVER 
+
+Very Detailed Answer: Understanding Inline Assembly in C
+Question Summary
+
+The question seeks a detailed explanation of the provided assembly code snippets, including a dry run of the code with a simple example. Additionally, it inquires about the purpose of the __ASM__ directive in generating assembly code.
+Answer
+
+The provided code snippets demonstrate how to perform input and output operations directly with hardware ports using inline assembly within C. This is particularly useful in systems programming, where direct hardware manipulation is often required. Let's break down each function and understand its workings, followed by a dry run example.
+Code Breakdown
+
+    Function: port_byte_in
+
+    language-c
+
+unsigned char port_byte_in (unsigned short port) {
+    unsigned char result;
+    __asm__("in %%dx, %%al" : "=a" (result) : "d" (port));
+    return result;
+}
+
+    Purpose: Reads a byte from a specified hardware port.
+    Inline Assembly Explanation:
+        in %%dx, %%al: This instruction reads a byte from the port specified in the dx register and stores it in the al register.
+        : "=a" (result): The output operand, where the value from al is stored in the C variable result.
+        : "d" (port): The input operand, where the value of port is loaded into the dx register.
+
+Function: port_byte_out
+
+language-c
+
+void port_byte_out (unsigned short port, unsigned char data) {
+    __asm__("out %%al, %%dx" : : "a" (data), "d" (port));
+}
+
+    Purpose: Sends a byte to a specified hardware port.
+    Inline Assembly Explanation:
+        out %%al, %%dx: This instruction sends the byte in the al register to the port specified in the dx register.
+        : : "a" (data), "d" (port): The input operands where data is loaded into al and port into dx. There are no output operands.
+
+Function: port_word_in
+
+language-c
+
+unsigned short port_word_in (unsigned short port) {
+    unsigned short result;
+    __asm__("in %%dx, %%ax" : "=a" (result) : "d" (port));
+    return result;
+}
+
+    Purpose: Reads a word (2 bytes) from a specified hardware port.
+    Inline Assembly Explanation:
+        in %%dx, %%ax: Reads a word from the port specified in dx and stores it in the ax register.
+        : "=a" (result): The output operand where the value from ax is stored in result.
+        : "d" (port): The input operand where port is loaded into dx.
+
+Function: port_word_out
+
+language-c
+
+    void port_word_out (unsigned short port, unsigned short data) {
+        __asm__("out %%ax, %%dx" : : "a" (data), "d" (port));
+    }
+
+        Purpose: Sends a word to a specified hardware port.
+        Inline Assembly Explanation:
+            out %%ax, %%dx: Sends the word in ax to the port specified in dx.
+            : : "a" (data), "d" (port): The input operands where data is loaded into ax and port into dx.
+
+Dry Run Example
+
+Let’s consider a simple example where we want to read a byte from port 0x60 (often used for keyboard input) and then write a byte 0xFF to port 0x61.
+
+    Reading from Port:
+
+    language-c
+
+unsigned char value = port_byte_in(0x60);
+
+    Dry Run:
+        The function port_byte_in is called with port set to 0x60.
+        The inline assembly executes in %%dx, %%al, where dx is loaded with 0x60.
+        The byte read from port 0x60 is stored in al and then transferred to result.
+        The function returns the value read from the port.
+
+Writing to Port:
+
+language-c
+
+    port_byte_out(0x61, 0xFF);
+
+        Dry Run:
+            The function port_byte_out is called with port set to 0x61 and data set to 0xFF.
+            The inline assembly executes out %%al, %%dx, where al is loaded with 0xFF and dx with 0x61.
+            The byte 0xFF is sent to port 0x61.
+
+Purpose of __ASM__
+
+The __ASM__ directive is used to embed assembly language instructions directly within C code. This is particularly beneficial for:
+
+    Performance: Directly accessing hardware ports can be more efficient than using higher-level abstractions.
+    Control: It allows for precise control over hardware operations, which is essential in systems programming.
+    Compatibility: Inline assembly can be used to leverage specific CPU instructions that may not be available in C.
+
+In conclusion, the provided code snippets illustrate how to perform low-level hardware interactions using inline assembly in C. This approach is crucial for systems programming, where performance and direct hardware access are paramount.
+
+'''
+WHY WE NEED TO USE 2% SIGNS : 
+==>
+Very Detailed Answer: Understanding the Use of Double Percent Signs in Assembly Language
+Question Summary
+
+The question seeks to clarify the significance of using two percent signs (%%) with the DX register in the inline assembly code provided. It also inquires about the meaning of the % symbol in this context and why it appears twice.
+Answer
+
+In the realm of Assembly language, particularly when interfacing with C or C++ through inline assembly, the syntax can often be perplexing. The use of double percent signs (%%) is a specific convention that serves a distinct purpose in the context of inline assembly. Let’s break this down step by step.
+The Role of the Percent Sign
+
+In the context of inline assembly, the percent sign (%) is used to denote registers and variables. When you see a single percent sign, it typically indicates a register or a variable that is being referenced. However, when you use two percent signs (%%), it signifies that you are referring to a register in a way that is compatible with the assembler's syntax.
+Why Two Percent Signs?
+
+The double percent sign is necessary to escape the single percent sign in the context of C/C++ preprocessor directives. The C/C++ compiler interprets a single percent sign as a special character, which can lead to confusion or errors during compilation. By using %%, you effectively tell the compiler, "This is not a special character; I am referring to the actual register."
+Example Breakdown
+
+Let’s analyze the provided code snippet to illustrate this concept:
+
+language-c
+
+unsigned char port_byte_in (unsigned short port) {
+    unsigned char result;
+    __asm__("in %%dx, %%al" : "=a" (result) : "d" (port));
+    return result;
+}
+
+    Inline Assembly Syntax: The __asm__ directive allows you to embed assembly code within C/C++ code. The string "in %%dx, %%al" is the assembly instruction being executed.
+
+    Instruction Explanation:
+        in %%dx, %%al: This instruction reads a byte from the I/O port specified by the DX register and stores it in the AL register.
+        The %%dx and %%al are the registers being referenced. The double percent signs ensure that the assembler correctly interprets these as registers rather than special characters.
+
+    Input and Output:
+        The part : "=a" (result) indicates that the output of the assembly code will be stored in the C variable result, which corresponds to the AL register.
+        The part : "d" (port) indicates that the input to the assembly code will come from the C variable port, which corresponds to the DX register.
+
+Conclusion
+
+In summary, the use of double percent signs (%%) in inline assembly is a necessary convention to ensure that the C/C++ compiler correctly interprets the assembly code without confusion. It allows for a seamless integration of assembly instructions within C/C++ programs, enabling developers to leverage low-level hardware interactions while maintaining the higher-level structure of their code.
+
+Understanding these nuances is crucial for anyone looking to work effectively with inline assembly, especially in performance-critical applications or when direct hardware manipulation is required.
+
+==> "https://cs.brown.edu/courses/cs033/docs/guides/x64_cheatsheet.pdf"
+==> "https://cs61.seas.harvard.edu/site/2018/Asm1/" ==> ALL ARGUEMENTS INFO IN EASIER WAY 
+==> "https://web.stanford.edu/class/archive/cs/cs107/cs107.1206/lectures/11/Lecture11.pdf" ==> WHOLE DETAILED 
+
+--> "https://stackoverflow.com/questions/4490635/intel-vs-att-syntax-when-addressing-xmm-and-floating-instruction?rq=4"
+--> "https://stackoverflow.com/questions/46679574/difference-between-register-and-register-in-x86-assembly-att-syntax?rq=4"
+'''
+
+DEBUGGING WITH GDB : 
+'''
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/15-video-ports/kernel$ gcc kernel.c ../drivers/ports.c -g -o kernel
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/15-video-ports/kernel$ gdb kernel
+GNU gdb (Ubuntu 9.2-0ubuntu1~20.04.2) 9.2
+Copyright (C) 2020 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+    <http://www.gnu.org/software/gdb/documentation/>.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from kernel...
+
+==> 
+(gdb) set disassembly-flavor intel
+(gdb) disas main
+Dump of assembler code for function main:
+   0x0000000000001129 <+0>:	endbr64 
+   0x000000000000112d <+4>:	push   rbp
+   0x000000000000112e <+5>:	mov    rbp,rsp
+   0x0000000000001131 <+8>:	sub    rsp,0x10
+   0x0000000000001135 <+12>:	mov    esi,0xe #SOURCE
+   0x000000000000113a <+17>:	mov    edi,0x3d4 #DESTINATION
+   0x000000000000113f <+22>:	call   0x11cb <port_byte_out>
+   0x0000000000001144 <+27>:	mov    edi,0x3d5
+   0x0000000000001149 <+32>:	call   0x11ad <port_byte_in>
+   0x000000000000114e <+37>:	movzx  eax,al
+   0x0000000000001151 <+40>:	mov    DWORD PTR [rbp-0x10],eax
+   0x0000000000001154 <+43>:	shl    DWORD PTR [rbp-0x10],0x8
+   0x0000000000001158 <+47>:	mov    esi,0xf
+   0x000000000000115d <+52>:	mov    edi,0x3d4
+   0x0000000000001162 <+57>:	call   0x11cb <port_byte_out>
+   0x0000000000001167 <+62>:	mov    edi,0x3d5
+   0x000000000000116c <+67>:	call   0x11ad <port_byte_in>
+   0x0000000000001171 <+72>:	movzx  eax,al
+   0x0000000000001174 <+75>:	add    DWORD PTR [rbp-0x10],eax
+   0x0000000000001177 <+78>:	mov    eax,DWORD PTR [rbp-0x10]
+   0x000000000000117a <+81>:	add    eax,eax
+   0x000000000000117c <+83>:	mov    DWORD PTR [rbp-0xc],eax
+--Type <RET> for more, q to quit, c to continue without paging--
+    0x000000000000117f <+86>:	mov    QWORD PTR [rbp-0x8],0xb8000
+   0x0000000000001187 <+94>:	mov    eax,DWORD PTR [rbp-0xc]
+   0x000000000000118a <+97>:	movsxd rdx,eax
+   0x000000000000118d <+100>:	mov    rax,QWORD PTR [rbp-0x8]
+   0x0000000000001191 <+104>:	add    rax,rdx
+   0x0000000000001194 <+107>:	mov    BYTE PTR [rax],0x58
+   0x0000000000001197 <+110>:	mov    eax,DWORD PTR [rbp-0xc]
+   0x000000000000119a <+113>:	cdqe   
+   0x000000000000119c <+115>:	lea    rdx,[rax+0x1]
+   0x00000000000011a0 <+119>:	mov    rax,QWORD PTR [rbp-0x8]
+   0x00000000000011a4 <+123>:	add    rax,rdx
+   0x00000000000011a7 <+126>:	mov    BYTE PTR [rax],0xf
+   0x00000000000011aa <+129>:	nop
+   0x00000000000011ab <+130>:	leave  
+   0x00000000000011ac <+131>:	ret    
+   
+   ==> IMPORTANT POINTS : 
+   0x000000000000115d <+52>:	mov    edi,0x3d4
+   0x0000000000001162 <+57>:	call   0x11cb <port_byte_out>
+   0x0000000000001167 <+62>:	mov    edi,0x3d5
+   0x000000000000116c <+67>:	call   0x11ad <port_byte_in
+End of assembler dump.
+
+==> Concepts you may want to Google beforehand: I/O ports
+
+Goal: Learn how to use the VGA card data ports
+
+We will use C to communicate with devices via I/O registers and ports.
+
+Open drivers/ports.c and examine the inline C assembler syntax. It has some differences, like the order of the source and destination operands, and the funny syntax to assign variables to operands.
+
+When you understand the concepts, open kernel/kernel.c for an example of use.
+
+In this example we will examine the I/O ports which map the screen cursor position. Specifically, we will query port 0x3d4 with value 14 to request the cursor position high byte, and the same port with 15 for the low byte.
+
+When this port is queried, it saves the result in port 0x3d5
+
+Don't miss the opportunity to use gdb to inspect the value of C variables, since we still can't print them on the screen. To do so, set a breakpoint for a specific line, breakpoint kernel.c:21 and use the print command to examine variables. Aren't you glad now that we invested some time in compiling the cross-compiled gdb? ;)
+
+Finally, we will use the queried cursor position to write a character at that location.
+
+'''

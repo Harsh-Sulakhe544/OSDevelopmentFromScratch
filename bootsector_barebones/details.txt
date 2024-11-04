@@ -1,0 +1,35 @@
+exact assembly code after compilation : 
+e9 fd ff 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[ 29 more lines with sixteen zero-bytes each ]
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 55 aa
+
+using qemu 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/bootsector_barebones$ sudo apt install qemu-system-x86
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/bootsector_barebones$ nasm -f bin boot_sect_simple.asm -o boot_sect_simple.bin
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/bootsector_barebones$ qemu-system-x86_64 -drive format=raw,file=boot_sect_simple.bin
+
+to view the disassembly : use ndiasm 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/bootsector_barebones$ ndisasm -b 16 boot_sect_simple.bin
+
+==> 
+000001F6  0000              add [bx+si],al
+000001F8  0000              add [bx+si],al
+000001FA  0000              add [bx+si],al
+000001FC  0000              add [bx+si],al
+000001FE  55                push bp
+000001FF  AA                stosb
+
+
+to view the binaries of the sector == > 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/bootsector_barebones$ xxd boot_sect_simple.bin
+
+==> 00000190: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001a0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001b0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001c0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001d0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001e0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001f0: 0000 0000 0000 0000 0000 0000 0000 55aa  ..............U.

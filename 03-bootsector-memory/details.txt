@@ -1,0 +1,534 @@
+''' best textbook : refer page no 14 : "https://www.cs.bham.ac.uk//~exr/lectures/opsys/10_11/lectures/os-dev.pdf"  ==> actually working 
+
+NBEST REFERNCE ==> why that ax,bx,cx,dx ==> "https://stackoverflow.com/questions/53866854/differences-between-general-purpose-registers-in-8086-bx-works-cx-doesnt"
+
+"
+The Role of BX Register
+
+The BX register is primarily used as a base pointer for memory addressing. It is particularly useful in scenarios where you need to access data in memory, as it can hold the base address from which offsets can be calculated. This is especially relevant in the context of segment-based memory addressing, which is a common practice in real-mode x86 programming.
+Why Not AX, CX, or DX?
+
+    AX (Accumulator Register): The AX register is typically used for arithmetic operations and I/O operations. It is often the default register for operations that require a single operand. However, using AX as a base pointer can lead to complications, especially since it is frequently involved in operations that require it to be the destination or source.
+
+    CX (Count Register): The CX register is primarily used as a counter for loops and string operations. While it can technically be used for addressing, it is not ideal for this purpose due to its specialized role in control flow.
+
+    DX (Data Register): The DX register is often used in conjunction with AX for I/O operations and multiplication/division. Similar to AX, using DX as a base pointer can lead to conflicts with its primary functions.
+
+The Instruction Context
+
+In the provided code snippet, the instruction mov al, [ax] is illegal because it attempts to use the same register (AX) as both the source and destination. This restriction is a fundamental aspect of the x86 architecture, which prevents data from being moved within the same register in a single instruction.
+
+"
+what is that $ and $$ :  :: 
+
+Very Detailed Answer: Understanding the Use of Symbols in Assembly Language
+Question Summary
+
+The question seeks to clarify the significance of the symbols $, $$, and - in Assembly language, particularly in the context of addressing and referencing data.
+Answer
+
+In Assembly language, symbols play a crucial role in defining how data is accessed and manipulated. The symbols $, $$, and - are commonly used in various Assembly dialects, particularly in the context of addressing modes and labels. Let’s break down each symbol to understand their meanings and applications in detail.
+The $ Symbol
+
+The dollar sign ($) is a special symbol that represents the current address in the program. It is often used in the context of defining data or instructions relative to the current location in memory. For example:
+
+language-assembly
+
+section .data
+    myData db 10      ; Define a byte with value 10
+    myLabel:          ; Define a label
+    db $ - myData     ; Calculate the offset from myData to the current address
+
+In this example, $ - myData computes the distance (in bytes) from the label myData to the current address where the instruction is located. This is particularly useful for creating data structures or for implementing loops and jumps.
+The $$ Symbol
+
+The double dollar sign ($$) is used to represent the starting address of the current section. This is particularly useful when you want to reference the beginning of a section, regardless of where the current instruction is located. For instance:
+
+language-assembly
+
+section .text
+    start:
+    mov eax, $$       ; Load the starting address of the .text section into EAX
+
+Here, $$ provides a way to access the base address of the .text section, which can be useful for various purposes, such as calculating offsets for data structures or for debugging.
+The - Symbol
+
+The minus sign (-) is used for subtraction, and in the context of Assembly language, it often serves to calculate offsets or distances between addresses. It can be used in conjunction with $ and $$ to derive meaningful values. For example:
+
+language-assembly
+
+section .data
+    array db 1, 2, 3, 4, 5
+    arraySize equ $ - array  ; Calculate the size of the array
+
+In this snippet, $ - array computes the total number of bytes occupied by the array, which is essential for iterating through the array or for memory management.
+Practical Example
+
+To illustrate the combined use of these symbols, consider the following example:
+
+language-assembly
+
+section .data
+    message db 'Hello, World!', 0
+    msgLength equ $ - message  ; Calculate the length of the message
+
+section .text
+    global _start
+
+_start:
+    ; Print the message
+    mov eax, 4          ; syscall number for sys_write
+    mov ebx, 1          ; file descriptor 1 is stdout
+    mov ecx, message    ; pointer to the message
+    mov edx, msgLength  ; length of the message
+    int 0x80            ; call kernel
+
+    ; Exit the program
+    mov eax, 1          ; syscall number for sys_exit
+    xor ebx, ebx        ; return 0 status
+    int 0x80            ; call kernel
+
+In this example, we define a message and calculate its length using $ - message. This allows us to dynamically determine the size of the data we want to print, ensuring that our program is flexible and adaptable to changes in the data.
+Conclusion
+
+In summary, the symbols $, $$, and - are integral to effective programming in Assembly language. They provide a means to reference current addresses, calculate offsets, and manage data structures efficiently. Understanding these symbols enhances your ability to write robust and efficient Assembly code, making it easier to manipulate data and control program flow. By mastering these concepts, you can leverage the full power of Assembly language in your programming endeavors.
+
+'''
+
+why bios loads bootloader in to 0x7c00 : "https://stackoverflow.com/questions/51995987/bios-and-address-0x07c00"
+
+"https://stackoverflow.com/questions/50260277/is-there-a-difference-between-org-0x7c00-and-mov-ax-07c0h"
+
+
+Very Detailed Answer: Assembly Language Code Explanation and Dry Run
+Question Summary
+
+The task is to explain a given assembly language code snippet that attempts to print a character stored in memory, specifically the character 'X'. The explanation will include a dry run of the code, a memory-stack-address representation, and an analysis of why the first attempt fails.
+Answer
+Overview of the Code
+
+The provided assembly code is designed to print characters to the screen using BIOS interrupt 0x10. The character 'X' is stored in memory, and the code attempts to print it through various attempts, each with different methods of accessing the memory address.
+Memory-Stack-Address Representation
+
+Before we dive into the dry run, let's visualize the memory layout:
+
+Address   | Content
+----------|---------
+0x7C00    | [Boot Sector Start]
+0x7C2D    | 'X' (ASCII 0x58)
+0x7C2E    | 0x00 (Zero Padding)
+...       | ...
+0x7CFF    | 0x00 (Zero Padding)
+0x7D00    | [Next Segment]
+
+Dry Run of the Code
+
+    Setting up the BIOS interrupt for character output:
+
+    language-assembly
+
+mov ah, 0x0e
+
+This instruction sets up the function for teletype output, which will print characters to the screen.
+
+Attempt 1:
+
+language-assembly
+
+mov al, "1"
+int 0x10
+mov al, the_secret
+int 0x10
+
+    Explanation:
+        The first mov al, "1" loads the ASCII value of '1' into the AL register and prints it.
+        The second mov al, the_secret attempts to load the address of the_secret into AL, which is incorrect because AL expects a character, not an address.
+    Failure Reason:
+        The instruction tries to print the memory address instead of the content at that address. This results in an undefined behavior or garbage output.
+
+Attempt 2:
+
+language-assembly
+
+mov al, "2"
+int 0x10
+mov al, [the_secret]
+int 0x10
+
+    Explanation:
+        The first line prints '2'.
+        The second line correctly dereferences the_secret to get the character 'X'.
+    Outcome:
+        This attempt is correct, but it fails to account for the BIOS memory offset.
+
+"the bios cannot load directly without loading bootloader , somewhat static stack pointer approach" : 
+
+Breakdown of the Code
+
+    mov al, "2": This instruction moves the ASCII value of the character "2" into the AL register. The ASCII value for "2" is 50 in decimal or 0x32 in hexadecimal.
+
+    int 0x10: This instruction triggers BIOS interrupt 0x10, which is commonly used for video services. In this case, it would display the character stored in AL on the screen.
+
+    mov al, [the_secret]: This instruction attempts to move the value located at the memory address labeled the_secret into the AL register.
+
+    int 0x10: Again, this calls the BIOS interrupt to display the character now stored in AL.
+
+
+"
+Importance of Offsets
+
+When you declare a variable in assembly, it is typically stored at a specific offset from a segment base. If you do not specify the correct offset, the assembler will not know where to find the_secret, leading to undefined behavior or a crash.
+
+What Happens If No Offset is Used?
+
+If you attempt to access the_secret without specifying the correct offset, the assembler will look for it at the default address, which may not correspond to where the_secret is actually stored. This can lead to:
+
+    Accessing Invalid Memory: The program may try to read from an address that is not allocated, causing a segmentation fault or a crash.
+    Incorrect Data: If the address is valid but not where the_secret is stored, the program may retrieve garbage data, leading to unpredictable behavior.
+
+
+The stack pointer (SP) points to the top of the stack, which is a specific area in memory used for temporary storage of data. While the stack pointer does use offsets to access data, the concept of accessing a variable like the_secret is different. The stack pointer is dynamic and changes as data is pushed or popped, while the offset for the_secret is static and must be defined at compile time."          
++-------------------+
+| Segment: 0x0000  |
++-------------------+
+| Offset: 0x7C00   | <--- Bootloader starts here
++-------------------+
+| ...               |
+| the_secret       | <--- Variable stored here
+| ...               |
++-------------------+
+
+Attempt 3:
+
+language-assembly
+
+mov al, "3"
+int 0x10
+mov bx, the_secret
+add bx, 0x7c00
+mov al, [bx]
+int 0x10
+
+    Explanation:
+        The first line prints '3'.
+        The second line moves the address of the_secret into BX and adds the BIOS offset 0x7C00.
+        The third line dereferences BX to get the character 'X' and prints it.
+    Outcome:
+        This attempt successfully prints 'X'.
+
+Attempt 4:
+
+language-assembly
+
+mov al, "4"
+int 0x10
+mov al, [0x7c2d]
+int 0x10
+
+    Explanation:
+        The first line prints '4'.
+        The second line directly accesses the memory address 0x7C2D, which contains 'X'.
+    Outcome:
+        This attempt works but is not ideal as it hardcodes the address.
+
+Infinite Loop:
+
+language-assembly
+
+jmp $ ; infinite loop
+
+    This instruction creates an infinite loop to prevent the program from exiting.
+
+"
+what is equ register : 
+
+Very Detailed Answer: Understanding the equ Directive in Assembly
+Question Summary
+
+The question seeks to clarify the function of the equ directive in the provided Assembly code snippet, specifically in the context of calculating the size of an array. Additionally, a pictorial representation is requested to enhance understanding.
+Answer
+
+In Assembly language, the equ directive is a powerful tool used for defining constants. It allows programmers to assign a symbolic name to a value, which can then be used throughout the code. This enhances readability and maintainability, as it eliminates the need to repeatedly use literal values.
+Breakdown of the Code
+
+Let's analyze the provided code snippet:
+
+language-assembly
+
+section .data
+    array db 1, 2, 3, 4, 5
+    arraySize equ $ - array  ; Calculate the size of the array
+
+    Section Declaration:
+        section .data indicates that the following data is to be stored in the data segment of the program. This is where initialized data is kept.
+
+    Array Definition:
+        array db 1, 2, 3, 4, 5 defines an array named array containing five bytes, each initialized with the values 1 through 5. The db directive stands for "define byte," which allocates space for the specified values.
+
+    Size Calculation:
+        arraySize equ $ - array is where the equ directive comes into play. Here, $ represents the current address in the data segment, which is the address immediately following the last byte of the array. By subtracting the address of array from $, we effectively calculate the total number of bytes allocated for the array.
+
+Pictorial Representation
+
+To visualize this, consider the following representation:
+
+Memory Address   | Value
+-----------------|-------
+0x0000           | 1  (array[0])
+0x0001           | 2  (array[1])
+0x0002           | 3  (array[2])
+0x0003           | 4  (array[3])
+0x0004           | 5  (array[4])
+0x0005           |    (End of array, $ points here)
+
+In this representation:
+
+    The array starts at memory address 0x0000 and occupies five consecutive bytes.
+    The $ symbol points to the address 0x0005, which is the next available address after the last element of the array.
+    The calculation arraySize equ $ - array results in arraySize being equal to 5, as there are five elements in the array.
+
+Conclusion
+
+The equ directive is essential for defining constants in Assembly language, making code more understandable and easier to manage. In this case, it allows for the dynamic calculation of the size of the array, which can be particularly useful in scenarios where the size may change or when working with larger datasets. By using equ, programmers can write more flexible and maintainable code, ultimately leading to better software development practices.
+"    
+
+commands to try 
+'
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ ls
+boot_sect_memory.asm  details.txt
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ nasm -f bin boot_sect_memory.asm -o boot_sect_memory.bin
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ qemu-system-x86_64 format=raw,file=boot_sect_memory.bin 
+qemu-system-x86_64: format=raw,file=boot_sect_memory.bin: Could not open 'format=raw,file=boot_sect_memory.bin': No such file or directory
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ qemu-system-x86_64 -drive format=raw,file=boot_sect_memory.bin
+
+'
+
+"
+when we run on;y 1 and x : we get that 1 and x with xxd tool : 
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ nasm -f bin boot_sect_memory.asm -o boot_sect_memory.bin
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ qemu-system-x86_64 -drive format=raw,file=boot_sect_memory.bin
+^Cqemu-system-x86_64: terminating on signal 2
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ xxd boot_sect_memory.bin
+
+8 bytes each of 4 bit ==> showing 16 as 1 and x (cause to display content as shortcut , we consider only 2 bits ) 
+00000000: b40e b031 cd10 b00c cd10 ebfe 5800 0000  ...1........X...
+00000010: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000020: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000030: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000040: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000050: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000060: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000070: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000080: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000090: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000000a0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000000b0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000000c0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000000d0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000000e0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000000f0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000100: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000110: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000120: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000130: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000140: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000150: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000160: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000170: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000180: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000190: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001a0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001b0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001c0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001d0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001e0: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+000001f0: 0000 0000 0000 0000 0000 0000 0000 55aa  ..............U.
+"
+
+
+when i add the second way , it is still the weird output ==> 1z2.. ==> z is invalid character instead of x , could not be loaded , that .. is cursor issue wr bios routine : 
+
+==> 
+Attempt 1: 
+mov al, "1"
+int 0x10
+mov al, the_secret
+int 0x10
+
+In this attempt, the first line correctly loads the ASCII value for '1' into the AL register and calls the interrupt to print it. However, the second line attempts to load the address of the_secret into AL, which is incorrect. Instead of loading the ASCII value of 'X', it loads the memory address of the_secret, leading to undefined behavior when printed
+
+Attempt 2:
+mov al, "2"
+int 0x10
+mov al, [the_secret]
+int 0x10
+
+Here, the code correctly prints '2'. However, the line mov al, [the_secret] is intended to load the ASCII value of 'X' into AL. The issue arises from the fact that the the_secret label is not directly pointing to the ASCII value but rather to the memory location where 'X' is stored. If the memory layout is not as expected, this could lead to incorrect values being loaded.
+
+Memory Layout: The the_secret label is defined as follows:
+
+language-assembly
+
+the_secret:
+    db "X"
+
+This means that the ASCII character 'X' (0x58) is stored at the address of the_secret. However, the code also includes zero padding and a BIOS boot signature:
+
+
+''
+now when i run the binary for both the attempt 1 and 2 : 
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ xxd boot_sect_memory.bin
+00000000: b40e b031 cd10 b015 cd10 b032 cd10 a015  ...1.......2....
+00000010: 00cd 10eb fe58 0000 0000 0000 0000 0000  .....X..........
+''
+
+''
+when i run all the 4 and my comparator together == attempt 5  ==> +0x7c00
+==> 152z3x4=55 ,  u can see | operator means 5 , then it is with = 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ xxd boot_sect_memory.bin
+
+00000000: b40e b031 cd10 b035 cd10 b032 cd10 a035  ...1...5...2...5
+00000010: 00cd 10b0 33cd 10bb 3500 81c3 007c 8a07  ....3...5....|..
+00000020: cd10 b034 cd10 a02d 7ccd 10b0 35cd 10b0  ...4...-|...5...
+00000030: 35cd 10eb fe58 0000 0000 0000 0000 0000  5....X..........
+
+The Addition: By performing the_secret + 0x7c00, the code effectively calculates a new address. This new address is the sum of the base address of the_secret and the offset 0x7c00. This operation is essential for accessing data that is located at a specific offset from a base address.
+
+
+when i make 2d + ox7c00 : 
+u see that = is padded : 
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ nasm -f bin boot_sect_memory.asm -o boot_sect_memory.bin
+boot_sect_memory.asm:52: warning: byte data exceeds bounds [-w+number-overflow]
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ qemu-system-x86_64 -drive format=raw,file=boot_sect_memory.bin
+
+
+==> 1=2=z3x4=56w
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ xxd boot_sect_memory.bin
+
+00000000: b40e b031 cd10 b03d cd10 b032 cd10 a03d  ...1...=...2...=
+00000010: 00cd 10b0 33cd 10bb 3d00 81c3 007c 8a07  ....3...=....|..
+00000020: cd10 b034 cd10 a02d 7ccd 10b0 35cd 10b0  ...4...-|...5...
+00000030: 3db0 36cd 10b0 3db0 02cd 10eb fe58 0000  =.6...=......X..
+
+''
+what is org : 
+"
+The org directive stands for "origin." It tells the assembler where to place the following code in memory. It does not affect the execution of the code but rather informs the assembler about the memory layout.
+
+Is it "org mode" or "public mode"?
+
+The term "org mode" or "public mode" is not standard terminology in assembly language. The org directive is simply a way to set the origin of the code. It does not imply any specific mode of operation. Instead, it is a directive that helps in organizing the code in memory.
+Pictorial Representation
+
+To illustrate how the org directive works, consider the following diagram:
+
++---------------------+
+|   BIOS Boot Sector  |
+|                     |
+|   Address: 0x7C00   | <--- org 0x7C00
+|                     |
+|   mov ah, 0x0e     |
+|                     |
++---------------------+
+
+In this representation:
+
+    The BIOS loads the boot sector at the address 0x7C00.
+    The org 0x7C00 directive indicates that the code following it should be placed starting at this address.
+
+How Does It Work?
+
+When the assembler processes the code, it will generate machine code that corresponds to the instructions provided. The org directive ensures that the machine code is correctly positioned in memory. For example, if you were to write additional instructions after the mov ah, 0x0e, they would be placed sequentially in memory starting from 0x7C00.
+
+"
+USE OF ORG DIRECTIVE ==> BY DEFAULT SETS THE BASE ADDRESS : 
+
+ORG - 0X7C00 - POINTER 
+
+Very Detailed Answer: Understanding the Use of org in Assembly Language
+Question Summary
+
+The question seeks to clarify the purpose of the org directive in the provided assembly code snippet. Specifically, it inquires whether org is functioning in "org mode," "public mode," or another capacity.
+Answer
+
+In assembly language, the org directive is crucial for defining the origin of the code segment in memory. In the context of the provided code, org 0x7c00 specifies that the assembler should treat the following code as starting at the memory address 0x7C00. This address is significant because it is the standard location where BIOS loads bootable code in x86 architecture systems.
+Breakdown of the Code
+
+    Understanding org:
+        The org directive does not imply a mode like "public mode" or "org mode." Instead, it sets the starting address for the code that follows. This is essential for bootloaders, as they need to know where in memory they will be executed.
+        In this case, org 0x7c00 tells the assembler that the code will be loaded at the physical address 0x7C00, which is where the BIOS expects to find the boot sector.
+
+    Code Explanation:
+        The first instruction, mov ah, 0x0e, prepares the ah register for teletype output, which is a method to print characters to the screen.
+        The subsequent attempts to print characters demonstrate various ways to access data in memory, particularly the variable the_secret.
+
+    Attempts to Print Characters:
+
+        Attempt 1:
+
+        language-assembly
+
+mov al, "1"
+int 0x10
+mov al, the_secret
+int 0x10
+
+This attempt fails because the_secret is treated as a pointer rather than the data it points to. The mov al, the_secret instruction tries to load the address of the_secret into al, which is not the intended behavior.
+
+Attempt 2:
+
+language-assembly
+
+mov al, "2"
+int 0x10
+mov al, [the_secret]
+int 0x10
+
+Here, the brackets around the_secret indicate that we want to access the value stored at that memory location. This is the correct way to retrieve the ASCII character 'X' stored at the_secret.
+
+Attempt 3:
+
+language-assembly
+
+mov al, "3"
+int 0x10
+mov bx, the_secret
+add bx, 0x7c00
+mov al, [bx]
+int 0x10
+
+This attempt fails because it adds 0x7C00 to the address of the_secret, effectively trying to access an incorrect memory location. The org directive already sets the base address, so this addition is unnecessary.
+
+Attempt 4:
+
+language-assembly
+
+        mov al, "4"
+        int 0x10
+        mov al, [0x7c2d]
+        int 0x10
+
+        This attempt works because it directly accesses the memory address where the ASCII character 'X' is stored. While this method is functional, it is less convenient than using a label like the_secret.
+
+    Final Notes:
+        The jmp $ instruction creates an infinite loop, effectively halting further execution after the character outputs.
+        The the_secret label is defined to store the ASCII character 'X' just before the zero-padding and the BIOS boot signature (0xAA55), which is essential for the boot sector.
+
+Conclusion
+
+In summary, the org directive is a fundamental aspect of assembly programming that defines the starting address for the code. It is not a mode but rather a directive that ensures the code is placed correctly in memory for execution. Understanding how to use org effectively is vital for writing bootloaders and other low-level programs that interact directly with hardware.
+
+WHENEVER WE LOAD THE CHARACTER HITS/MISSES OR FOR 1ST TIME LOADING , IT IS A "|" OPERATOR GETS LOAD ==> SYSTEM ACCESSING WRITE CHARACTER OIPERATION  
+
+harsh@harsh-P6-2010IX:~/Desktop/OSDevelopmentFromScratch/03-bootsector-memory$ xxd boot_sect_memory_org.bin
+
+00000000: b40e b031 cd10 b02d cd10 b032 cd10 a02d  ...1...-...2...-
+00000010: 7ccd 10b0 33cd 10bb 2d7c 81c3 007c 8a07  |...3...-|...|..
+00000020: cd10 b034 cd10 a02d 7ccd 10eb fe58 0000  ...4...-|....X..
+
+output == 1-2x3 4x , read a value/character , - indicates error cannot be loaded , x is successfull character to print now , 3 it fails , since it already failed so a space meaning , "no operation is executed "

@@ -1,0 +1,203 @@
+'''
+LESSONS 8,9,10 ARE SHIFTING TO 32 BIT MODE : 
+
+Concepts you may want to Google beforehand: 32-bit protected mode, VGA, video memory
+
+Goal: Print on the screen when on 32-bit protected mode
+
+32-bit mode allows us to use 32 bit registers and memory addressing, protected memory, virtual memory and other advantages, but we will lose BIOS interrupts and we'll need to code the GDT (more on this later)
+
+In this lesson we will write a new print string routine which works in 32-bit mode, where we don't have BIOS interrupts, by directly manipulating the VGA video memory instead of calling int 0x10. The VGA memory starts at address 0xb8000 and it has a text mode which is useful to avoid manipulating direct pixels.
+
+The formula for accessing a specific character on the 80x25 grid is:
+
+0xb8000 + 2 * (row * 80 + col)
+
+That is, every character uses 2 bytes (one for the ASCII, another for color and such), and we see that the structure of the memory concatenates rows.
+
+Open 32bit-print.asm to see the code. It will always print the string on the top left of the screen, but soon we'll write higher level routines to replace it.
+
+Unfortunately we cannot yet call this routine from the bootloader, because we still don't know how to write the GDT and enter protected mode. Once you have understood the code, jump to the next lesson.
+
+
+INTUTION : 
+Very Detailed Answer: Understanding the Formula for VGA Memory Access in 32-bit Protected Mode
+Question Summary
+
+The question seeks to explain the intuition behind the formula used to access specific characters in the VGA memory when operating in 32-bit protected mode. It specifically asks for a breakdown of the components of the formula 0xb8000 + 2 * (row * 80 + col), along with a simple example, a dry run, and a pictorial representation.
+Answer
+
+In the realm of low-level programming, particularly when dealing with graphics and text output in 32-bit protected mode, understanding how to manipulate memory directly is crucial. The formula 0xb8000 + 2 * (row * 80 + col) is a key component in accessing the VGA text mode memory, which is structured as an 80x25 grid of characters.
+Breakdown of the Formula
+
+    Base Address (0xb8000):
+        This is the starting address of the VGA text mode memory. In hexadecimal, 0xb8000 corresponds to the physical memory location where the text mode buffer begins. This buffer is where the characters to be displayed on the screen are stored.
+
+    Row and Column Calculation:
+        The VGA text mode screen is organized into rows and columns, specifically 80 columns wide and 25 rows high. To access a specific character, we need to calculate its position based on its row and column.
+        The formula row * 80 + col computes the linear index of the character in a one-dimensional representation of the two-dimensional grid. For example, if you want to access the character in the 3rd row and 5th column (0-indexed), the calculation would be:
+
+        index = (2 * 80) + 4 = 164
+
+    Byte Size of Each Character:
+        Each character in the VGA text mode occupies 2 bytes: one byte for the ASCII value of the character and another byte for its attribute (such as color). Therefore, we multiply the index by 2 to get the correct memory address:
+
+        address = 0xb8000 + 2 * index
+
+Simple Example and Dry Run
+
+Let’s consider an example where we want to access the character located at row 2 and column 4 (again, using 0-based indexing).
+
+    Calculate the Index:
+
+    row = 2
+    col = 4
+    index = (row * 80) + col = (2 * 80) + 4 = 164
+
+    Calculate the Address:
+
+    address = 0xb8000 + 2 * index
+    address = 0xb8000 + 2 * 164
+    address = 0xb8000 + 328
+    address = 0xb8000 + 0x0148
+    address = 0xb8148
+
+This address 0xb8148 is where the character and its attribute for the specified row and column are stored in memory.
+Pictorial Representation
+
+To visualize this, consider the following representation of the VGA memory layout:
+
++-------------------+
+| 0xb8000           | 0: "A" (Color)
+| 0xb8001           | 1: Attribute
+| 0xb8002           | 2: "B" (Color)
+| 0xb8003           | 3: Attribute
+| ...               |
+| 0xb8148           | 164: "C" (Color)
+| 0xb8149           | 165: Attribute
+| ...               |
++-------------------+
+
+In this layout, each character is followed by its attribute, and the address increments by 2 for each character. The formula allows us to navigate this grid efficiently, ensuring that we can directly manipulate the screen output without relying on BIOS interrupts.
+Conclusion
+
+Understanding the formula 0xb8000 + 2 * (row * 80 + col) is essential for programming in 32-bit protected mode, especially when dealing with VGA text mode. By breaking down the components of the formula and providing a simple example, we can see how it allows for direct access to the video memory, enabling efficient screen manipulation. This foundational knowledge is critical as we move forward in developing more complex routines for output in protected mode.
+
+'''
+
+'''
+EXPLANATION WITH DRY-RUN: 
+"
+Very Detailed Answer: Understanding the Assembly Code for Printing a String in Protected Mode
+Question Summary
+
+The task is to explain a given Assembly language code snippet that prints a string to the screen in 32-bit protected mode. This explanation will include a simple example, a dry run of the code, and a pictorial representation of the process.
+Answer
+
+The provided Assembly code is designed to print a string to the video memory in a 32-bit protected mode environment. Let's break down the code step by step, followed by a dry run and a pictorial representation.
+Code Breakdown
+
+language-assembly
+
+[bits 32] ; using 32-bit protected mode
+
+; this is how constants are defined
+VIDEO_MEMORY equ 0xb8000
+WHITE_ON_BLACK equ 0x0f ; the color byte for each character
+
+print_string_pm:
+    pusha
+    mov edx, VIDEO_MEMORY
+
+print_string_pm_loop:
+    mov al, [ebx] ; [ebx] is the address of our character
+    mov ah, WHITE_ON_BLACK
+
+    cmp al, 0 ; check if end of string
+    je print_string_pm_done
+
+    mov [edx], ax ; store character + attribute in video memory
+    add ebx, 1 ; next char
+    add edx, 2 ; next video memory position
+
+    jmp print_string_pm_loop
+
+print_string_pm_done:
+    popa
+    ret
+
+Explanation of the Code
+
+    Constants Definition:
+        VIDEO_MEMORY equ 0xb8000: This constant defines the starting address of the video memory for text mode in a 32-bit protected mode. This is where the characters will be written.
+        WHITE_ON_BLACK equ 0x0f: This constant defines the color attribute for the characters. In this case, it sets the text color to white on a black background.
+
+    Function print_string_pm:
+        pusha: This instruction saves all general-purpose registers onto the stack to preserve their values.
+        mov edx, VIDEO_MEMORY: The edx register is initialized to point to the start of the video memory.
+
+    Loop to Print Characters:
+        print_string_pm_loop: This label marks the beginning of the loop that will print each character.
+        mov al, [ebx]: The character at the address pointed to by ebx is loaded into the al register.
+        mov ah, WHITE_ON_BLACK: The color attribute is loaded into the ah register.
+        cmp al, 0: This instruction checks if the character is the null terminator (end of the string).
+        je print_string_pm_done: If the character is null, the program jumps to the end of the function.
+        mov [edx], ax: The character and its attribute are stored in video memory.
+        add ebx, 1: The ebx register is incremented to point to the next character in the string.
+        add edx, 2: The edx register is incremented to point to the next position in video memory (each character takes 2 bytes: 1 for the character and 1 for the attribute).
+        jmp print_string_pm_loop: The loop continues until the end of the string is reached.
+
+    End of Function:
+        print_string_pm_done: This label marks the end of the function.
+        popa: This instruction restores the values of all general-purpose registers from the stack.
+        ret: The function returns to the caller.
+
+Simple Example
+
+Let's assume we want to print the string "Hi". Before calling print_string_pm, we would set up the registers as follows:
+
+    ebx should point to the string "Hi", which is stored in memory as:
+
+    'H' (0x48), 'i' (0x69), 0 (null terminator)
+
+Dry Run
+
+    Initial Setup:
+        ebx points to the string "Hi".
+        edx is set to 0xb8000.
+
+    First Iteration:
+        mov al, [ebx]: al = 'H' (0x48).
+        mov ah, WHITE_ON_BLACK: ah = 0x0f.
+        cmp al, 0: Not zero, continue.
+        mov [edx], ax: Memory at 0xb8000 now contains 0x0f48.
+        add ebx, 1: ebx now points to 'i'.
+        add edx, 2: edx now points to 0xb8002.
+
+    Second Iteration:
+        mov al, [ebx]: al = 'i' (0x69).
+        mov ah, WHITE_ON_BLACK: ah = 0x0f.
+        cmp al, 0: Not zero, continue.
+        mov [edx], ax: Memory at 0xb8002 now contains 0x0f69.
+        add ebx, 1: ebx now points to null terminator.
+        add edx, 2: edx now points to 0xb8004.
+
+    Third Iteration:
+        mov al, [ebx]: al = 0 (null terminator).
+        cmp al, 0: This time it is zero, so we jump to print_string_pm_done.
+
+    End of Function:
+        Registers are restored, and the function exits.
+
+Pictorial Representation
+
+Below is a simplified representation of how the memory looks after executing the code:
+
+Memory Address   |   Value
+-----------------|----------------
+0xb8000         |   0x0f48  ; 'H' with white on black
+0xb8002         |   0x0f69  ; 'i' with white on black
+0xb8004         |   0x0000  ; null terminator
+
+"
+'''
